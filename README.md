@@ -15,22 +15,26 @@ CryptoBuddy is an intelligent cryptocurrency advisory chatbot that leverages Nat
 ## 🛠️ Technical Components
 
 ### API Integration
+
 - **CoinGecko API**: Retrieves real-time cryptocurrency market data
 - **Data points**: Prices, 24-hour changes, market capitalization
 
 ### NLP Capabilities
+
 - **NLTK Integration**: Natural language understanding for user queries
 - **Word Tokenization**: Breaks down queries into processable tokens
 - **Part-of-Speech Tagging**: Analyzes grammatical structure
 - **WordNet Integration**: Identifies synonyms for enhanced intent recognition
 
 ### Recommendation Logic
+
 - **Trend Analysis**: Identifies cryptocurrencies with positive price momentum
 - **Sustainability Rating**: Evaluates environmental impact (currently mocked data)
 - **Market Cap Evaluation**: Assesses market stability and prominence
 - **Combined Metrics**: Balances multiple factors for well-rounded recommendations
 
 ### Response Generation
+
 - **Dynamic Responses**: 10+ different response templates for each query type
 - **Randomized Greetings**: Various friendly introductions
 - **Ethical Disclaimers**: Important investment warnings with variety
@@ -39,29 +43,34 @@ CryptoBuddy is an intelligent cryptocurrency advisory chatbot that leverages Nat
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Python 3.6+
 - pip (Python package manager)
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/cryptobuddy.git
    cd cryptobuddy
    ```
 
 2. **Set up a virtual environment (recommended)**
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install nltk pycoingecko
    ```
 
 4. **Run the application**
+
    ```bash
    python crypto_buddy.py
    ```
@@ -101,6 +110,7 @@ Ask CryptoBuddy questions like:
 ## 📋 Current Cryptocurrency Coverage
 
 CryptoBuddy currently provides information on:
+
 - **Bitcoin (BTC)**: The original cryptocurrency
 - **Ethereum (ETH)**: The leading smart contract platform
 - **Cardano (ADA)**: A proof-of-stake blockchain platform
@@ -125,9 +135,11 @@ CryptoBuddy currently provides information on:
 ## 🧪 Technical Details
 
 ### File Structure
+
 - **crypto_buddy.py**: Main application file containing all functionality
 
 ### Dependencies
+
 - **pycoingecko**: Python wrapper for CoinGecko API
 - **nltk**: Natural Language Toolkit for query interpretation
 - **random**: Used for response randomization
@@ -135,6 +147,7 @@ CryptoBuddy currently provides information on:
 - **time**: Time-related functions for API rate limiting
 
 ### Error Handling
+
 - Robust error handling for API connectivity issues
 - Graceful fallback for NLTK data availability problems
 - SSL certificate verification workarounds
