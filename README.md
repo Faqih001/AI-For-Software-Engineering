@@ -52,8 +52,8 @@ CryptoBuddy is an intelligent cryptocurrency advisory chatbot that leverages Nat
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/cryptobuddy.git
-   cd cryptobuddy
+git clone https://github.com/Faqih001/AI-For-Software-Engineering.git
+    cd AI-For-Software-Engineering
    ```
 
 2. **Set up a virtual environment (recommended)**
