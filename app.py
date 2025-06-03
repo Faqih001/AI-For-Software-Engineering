@@ -18,6 +18,7 @@ import threading
 import traceback
 import random
 import sys
+from streamlit import config, set_page_config
 
 # Import functionality from original crypto_buddy
 from crypto_buddy import (
@@ -42,6 +43,7 @@ from crypto_buddy import (
     get_general_response,
     setup_dependencies
 )
+from chat_styles import get_chat_styling
 
 # Set up page config
 st.set_page_config(
@@ -172,10 +174,38 @@ def display_portfolio_analysis():
     # Chat interface
     st.write("💬 Chat with me about portfolio strategies!")
     
-    # Display chat history
+    # Add custom CSS for chat styling
+    st.markdown("""
+        <style>
+        .user-message {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 15px;
+            background-color: #e6f3ff;
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: 10px;
+            text-align: right;
+        }
+        .assistant-message {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 15px;
+            background-color: #f0f0f0;
+            max-width: 80%;
+            margin-right: auto;
+            margin-left: 10px;
+            text-align: left;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Display chat history with alternating styles
     for message in st.session_state.portfolio_chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+        if message["role"] == "user":
+            st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
     
     # Chat input
     if message := st.chat_input("Ask about portfolio strategies..."):
