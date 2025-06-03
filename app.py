@@ -609,17 +609,17 @@ def display_technical_analysis():
 
 def handle_buddy_chat(message):
     try:
-        # Add message to chat history
+        if not message:
+            return
+            
+        # Add message to history first for immediate feedback
         st.session_state.buddy_chat_history.append({"role": "user", "content": message})
         
         # Initialize response
         response = None
-        message_lower = message.lower() if message else ""
-
-        # Interpret query intent using NLP
-        intent = interpret_query(message)
+        message_lower = message.lower()
         
-        # Handle greetings with personalized welcome
+        # Quick responses for common queries to improve responsiveness
         if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
             username = st.session_state.user_profile.username if st.session_state.user_profile else None
             greeting = get_greeting()
@@ -631,34 +631,39 @@ def handle_buddy_chat(message):
             response += "• Price alerts and monitoring\n"
             response += "• Technical analysis and trends\n"
             response += "• Cryptocurrency market insights"
-        
-        # Handle portfolio queries with personalization
-        elif any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
+            st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+            return
+            
+        # Delegate to specialized handlers for complex queries
+        if any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
             handle_portfolio_chat(message)
             return
             
-        # Handle alert queries
         elif any(word in message_lower for word in ['alert', 'notify', 'notification']):
             handle_alerts_chat(message)
             return
             
-        # Handle technical analysis queries with more indicators
         elif any(word in message_lower for word in ['analysis', 'trend', 'price', 'technical']):
             handle_technical_chat(message)
             return
+        
+        # For other queries, process asynchronously
+        try:
+            # Generate response
+            intent = interpret_query(message)
             
-        # Handle trending queries with technical data
-        elif any(word in message_lower for word in ['trending', 'popular', 'hot']):
-            crypto_db = fetch_crypto_data()
-            if crypto_db:
-                # Find trending coins based on price momentum and volume
+            if any(word in message_lower for word in ['trending', 'popular', 'hot']):
+                crypto_db = fetch_crypto_data()
+                if not crypto_db:
+                    raise Exception("Unable to fetch crypto data")
+                    
                 rising_coins = [
                     coin for coin in crypto_db 
                     if crypto_db[coin]["price_trend"] == "rising" and crypto_db[coin]["market_cap"] == "high"
                 ]
+                
                 if rising_coins:
                     try:
-                        # Add technical analysis data
                         coin = rising_coins[0].lower()
                         historical_data = fetch_historical_data(coin)
                         if historical_data:
@@ -676,59 +681,62 @@ def handle_buddy_chat(message):
                                     response += f"• RSI: {rsi:.1f} ({rsi_status})\n"
                                 if momentum is not None:
                                     response += f"• 7-Day Momentum: {momentum:.2f}%"
-                    except Exception:
+                    except:
                         response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
+                
+            elif any(word in message_lower for word in ['sustainable', 'eco', 'green']):
+                response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
+                
+            elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
+                response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
+            
+            # Personalized response if user is logged in
+            elif st.session_state.user_profile:
+                crypto_db = fetch_crypto_data()
+                if crypto_db:
+                    personalized_recommendations = st.session_state.user_profile.get_personalized_recommendations(crypto_db)
+                    if personalized_recommendations:
+                        top_coin, _ = personalized_recommendations[0]
+                        response = f"{get_general_response()}\n\nBased on your preferences:\n"
+                        response += f"• Risk tolerance: {st.session_state.user_profile.risk_tolerance.capitalize()}\n"
+                        response += f"• Sustainability: {st.session_state.user_profile.sustainability_preference.capitalize()}\n"
+                        response += f"• Investment horizon: {st.session_state.user_profile.investment_horizon.capitalize()}\n\n"
+                        response += f"I recommend checking out {top_coin.capitalize()}. 🎯"
+            
+            # Default response
             if not response:
-                response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
-            
-        # Handle sustainability queries with detailed metrics
-        elif any(word in message_lower for word in ['sustainable', 'eco', 'green']):
-            response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
-            
-        # Handle long-term investment queries with growth metrics
-        elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
-            response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
-            
-        # Provide personalized response if user is logged in
-        elif st.session_state.user_profile:
-            crypto_db = fetch_crypto_data()
-            if crypto_db:
-                personalized_recommendations = st.session_state.user_profile.get_personalized_recommendations(crypto_db)
-                if personalized_recommendations:
-                    top_coin, _ = personalized_recommendations[0]
-                    response = f"{get_general_response()}\n\nBased on your preferences:\n"
-                    response += f"• Your risk tolerance: {st.session_state.user_profile.risk_tolerance.capitalize()}\n"
-                    response += f"• Sustainability preference: {st.session_state.user_profile.sustainability_preference.capitalize()}\n"
-                    response += f"• Investment horizon: {st.session_state.user_profile.investment_horizon.capitalize()}\n\n"
-                    response += f"I recommend checking out {top_coin.capitalize()}. 🎯"
-            
-        # Default response with gentle reminder to create profile
-        if not response:
-            response = f"{get_general_response()}\n\nI can help you with:\n"
-            response += "• Portfolio suggestions and analysis\n"
-            response += "• Setting up price alerts\n"
-            response += "• Technical analysis and trends\n"
-            response += "• Cryptocurrency market insights"
-            if not st.session_state.user_profile:
-                response += "\n\n💡 Create a profile to get personalized recommendations!"
+                response = f"{get_general_response()}\n\nI can help you with:\n"
+                response += "• Portfolio suggestions and analysis\n"
+                response += "• Setting up price alerts\n"
+                response += "• Technical analysis and trends\n"
+                response += "• Cryptocurrency market insights"
+                if not st.session_state.user_profile:
+                    response += "\n\n💡 Create a profile to get personalized recommendations!"
 
-        if response:
-            # Add disclaimer with variation based on query type
-            if 'investment' in message_lower or 'portfolio' in message_lower:
-                response += "\n\n⚠️ Important: Cryptocurrency investments involve significant risks. This is not financial advice!"
-            else:
-                response += f"\n\n{get_disclaimer()}"
-            
-            # Add response to chat history
-            st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+            # Add appropriate disclaimer
+            if response:
+                if 'investment' in message_lower or 'portfolio' in message_lower:
+                    response += "\n\n⚠️ Important: Cryptocurrency investments involve significant risks. This is not financial advice!"
+                else:
+                    response += f"\n\n{get_disclaimer()}"
+                
+                st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+                
+        except Exception as e:
+            error_msg = f"I encountered an error while processing your request: {str(e)}"
+            st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_msg})
             
     except Exception as e:
-        error_response = f"I encountered an error while processing your request: {str(e)}"
-        st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_response})
+        error_msg = f"An unexpected error occurred: {str(e)}"
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_msg})
 
 def display_buddy_chat():
     st.subheader("Chat with CryptoBuddy")
     
+    # Initialize session state for auto-scrolling
+    if 'chat_key' not in st.session_state:
+        st.session_state.chat_key = 0
+        
     # Welcome message if chat history is empty
     if not st.session_state.buddy_chat_history:
         st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
@@ -736,58 +744,91 @@ def display_buddy_chat():
         st.write("• 🔔 Setting up price alerts")
         st.write("• 📈 Technical analysis and trends")
         st.write("• 💡 General cryptocurrency advice")
+        
+        # Add some example queries to help users get started
+        with st.expander("💡 Try these example questions"):
+            st.write("- What cryptocurrencies are trending right now?")
+            st.write("- Give me a technical analysis of Bitcoin")
+            st.write("- Create a conservative portfolio with $5000")
+            st.write("- Alert me when Ethereum goes above $3000")
+            st.write("- Which coins are good for long-term investment?")
     
     # Add chat styling
     st.markdown(get_chat_styling(), unsafe_allow_html=True)
     
-    # Display chat history in container with auto-scroll
+    # Create a container for chat history
     chat_container = st.container()
+    
+    # Chat input at the bottom of the screen
+    input_container = st.container()
+    
+    # Display chat history with auto-scroll
     with chat_container:
         st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-        for message in st.session_state.buddy_chat_history:
+        
+        for i, message in enumerate(st.session_state.buddy_chat_history):
             if isinstance(message, dict) and "role" in message and "content" in message:
+                key = f"message_{i}_{st.session_state.chat_key}"
+                
                 if message["role"] == "user":
                     st.markdown(f'''
-                        <div class="user-message-container">
+                        <div class="user-message-container" id="{key}">
                             <div class="user-message">{message["content"]}</div>
                             <div class="message-avatar user-avatar">👤</div>
                         </div>
                     ''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''
-                        <div class="assistant-message-container">
+                        <div class="assistant-message-container" id="{key}">
                             <div class="message-avatar assistant-avatar">🤖</div>
                             <div class="assistant-message">{message["content"]}</div>
                         </div>
+                    ''', unsafe_allow_html=True)
+                    
+                # Auto-scroll to latest message
+                if i == len(st.session_state.buddy_chat_history) - 1:
+                    st.markdown(f'''
+                        <script>
+                            document.getElementById("{key}").scrollIntoView({{behavior: "smooth"}});
+                        </script>
                     ''', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input with thinking animation
-    if "thinking" not in st.session_state:
-        st.session_state.thinking = False
-    
-    if message := st.chat_input("Ask me anything about crypto...", key="buddy_chat_input"):
-        # Show thinking animation
-        thinking_placeholder = st.empty()
-        st.session_state.thinking = True
-        with thinking_placeholder:
-            st.markdown(f'''
-                <div class="assistant-message-container">
-                    <div class="message-avatar assistant-avatar">🤖</div>
-                    <div class="assistant-message">Thinking...</div>
-                </div>
-            ''', unsafe_allow_html=True)
+    with input_container:
+        # Only show input if not currently processing a message
+        if "thinking" not in st.session_state:
+            st.session_state.thinking = False
             
-        # Process message
-        handle_buddy_chat(message)
-        
-        # Remove thinking animation
-        thinking_placeholder.empty()
-        st.session_state.thinking = False
-        
-        # Rerun to update chat immediately
-        st.experimental_rerun()
+        if not st.session_state.thinking:
+            if message := st.chat_input("Ask me anything about crypto...", key=f"chat_input_{st.session_state.chat_key}"):
+                # Show thinking animation
+                thinking_placeholder = st.empty()
+                st.session_state.thinking = True
+                
+                with thinking_placeholder:
+                    st.markdown(f'''
+                        <div class="assistant-message-container">
+                            <div class="message-avatar assistant-avatar">🤖</div>
+                            <div class="assistant-message">
+                                <span class="thinking-dots">Thinking</span>
+                            </div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                    
+                # Process message
+                handle_buddy_chat(message)
+                
+                # Update chat key to force re-render and ensure correct scrolling
+                st.session_state.chat_key += 1
+                
+                # Remove thinking animation and reset state
+                thinking_placeholder.empty()
+                st.session_state.thinking = False
+                
+                # Rerun to update chat immediately
+                st.experimental_rerun()
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")
