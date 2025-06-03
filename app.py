@@ -631,11 +631,9 @@ def handle_buddy_chat(message):
             response += "• Price alerts and monitoring\n"
             response += "• Technical analysis and trends\n"
             response += "• Cryptocurrency market insights"
-            st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
-            return
-            
+        
         # Delegate to specialized handlers for complex queries
-        if any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
+        elif any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
             handle_portfolio_chat(message)
             return
             
@@ -647,88 +645,43 @@ def handle_buddy_chat(message):
             handle_technical_chat(message)
             return
         
-        # For other queries, process asynchronously
-        try:
-            # Generate response
+        # For other queries, process with general response
+        else:
+            # Generate response based on intent
             intent = interpret_query(message)
             
             if any(word in message_lower for word in ['trending', 'popular', 'hot']):
                 crypto_db = fetch_crypto_data()
-                if not crypto_db:
-                    raise Exception("Unable to fetch crypto data")
-                    
-                rising_coins = [
-                    coin for coin in crypto_db 
-                    if crypto_db[coin]["price_trend"] == "rising" and crypto_db[coin]["market_cap"] == "high"
-                ]
-                
-                if rising_coins:
-                    try:
-                        coin = rising_coins[0].lower()
-                        historical_data = fetch_historical_data(coin)
-                        if historical_data:
-                            indicators = calculate_technical_indicators(historical_data)
-                            if indicators and indicators.get('trend_signal'):
-                                signal = indicators['trend_signal'].get('signal', '')
-                                confidence = indicators['trend_signal'].get('confidence', 0)
-                                rsi = indicators.get('rsi', None)
-                                momentum = indicators.get('momentum', {}).get('7d', None)
-                                
-                                response = f"🔥 Trending Analysis:\n\n{get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]['price_trend'], crypto_db[rising_coins[0]]['market_cap'])}\n\n"
-                                response += f"Technical Indicators:\n• Signal: {signal.upper()} (Confidence: {confidence:.1f}%)\n"
-                                if rsi is not None:
-                                    rsi_status = "OVERSOLD" if rsi < 30 else "OVERBOUGHT" if rsi > 70 else "NEUTRAL"
-                                    response += f"• RSI: {rsi:.1f} ({rsi_status})\n"
-                                if momentum is not None:
-                                    response += f"• 7-Day Momentum: {momentum:.2f}%"
-                    except:
-                        response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
+                if crypto_db:
+                    response = get_trending_response(crypto_db)
+                else:
+                    response = get_no_trending_response()
                 
             elif any(word in message_lower for word in ['sustainable', 'eco', 'green']):
-                response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
-                
-            elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
-                response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
-            
-            # Personalized response if user is logged in
-            elif st.session_state.user_profile:
                 crypto_db = fetch_crypto_data()
                 if crypto_db:
-                    personalized_recommendations = st.session_state.user_profile.get_personalized_recommendations(crypto_db)
-                    if personalized_recommendations:
-                        top_coin, _ = personalized_recommendations[0]
-                        response = f"{get_general_response()}\n\nBased on your preferences:\n"
-                        response += f"• Risk tolerance: {st.session_state.user_profile.risk_tolerance.capitalize()}\n"
-                        response += f"• Sustainability: {st.session_state.user_profile.sustainability_preference.capitalize()}\n"
-                        response += f"• Investment horizon: {st.session_state.user_profile.investment_horizon.capitalize()}\n\n"
-                        response += f"I recommend checking out {top_coin.capitalize()}. 🎯"
-            
-            # Default response
-            if not response:
-                response = f"{get_general_response()}\n\nI can help you with:\n"
-                response += "• Portfolio suggestions and analysis\n"
-                response += "• Setting up price alerts\n"
-                response += "• Technical analysis and trends\n"
-                response += "• Cryptocurrency market insights"
-                if not st.session_state.user_profile:
-                    response += "\n\n💡 Create a profile to get personalized recommendations!"
-
-            # Add appropriate disclaimer
-            if response:
-                if 'investment' in message_lower or 'portfolio' in message_lower:
-                    response += "\n\n⚠️ Important: Cryptocurrency investments involve significant risks. This is not financial advice!"
+                    response = get_sustainable_response(crypto_db)
                 else:
-                    response += f"\n\n{get_disclaimer()}"
+                    response = get_less_sustainable_response()
                 
-                st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
-                
-        except Exception as e:
-            error_msg = f"I encountered an error while processing your request: {str(e)}"
-            st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_msg})
+            elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
+                crypto_db = fetch_crypto_data()
+                if crypto_db:
+                    response = get_longterm_response(crypto_db)
+                else:
+                    response = get_no_longterm_response()
+            
+            # Default response if no specific intent is matched
+            if not response:
+                response = get_general_response()
+        
+        # Add response to chat history if we have one
+        if response:
+            st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
             
     except Exception as e:
-        error_msg = f"An unexpected error occurred: {str(e)}"
-        st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_msg})
+        error_response = f"I encountered an error while processing your request: {str(e)}"
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_response})
 
 def display_buddy_chat():
     st.subheader("Chat with CryptoBuddy")
