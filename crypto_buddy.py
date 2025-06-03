@@ -6,6 +6,11 @@ import sys
 import time
 import traceback
 import random
+import json
+import os
+import datetime
+import re
+from threading import Thread
 
 # Try importing required modules with better error handling
 try:
@@ -19,6 +24,217 @@ except ImportError as e:
     print("Make sure you've installed the required packages using:")
     print("pip install nltk pycoingecko")
     sys.exit(1)
+
+class PriceAlert:
+    """A class to manage cryptocurrency price alerts for users."""
+    
+    def __init__(self, coin_id, target_price, alert_type='above', username='default'):
+        """Initialize a price alert.
+        
+        Args:
+            coin_id (str): The CoinGecko ID of the cryptocurrency
+            target_price (float): The target price for the alert
+            alert_type (str): 'above' or 'below' to trigger when price crosses target
+            username (str): The username associated with this alert
+        """
+        self.coin_id = coin_id
+        self.target_price = float(target_price)
+        self.alert_type = alert_type
+        self.username = username
+        self.created_at = datetime.datetime.now().isoformat()
+        self.triggered = False
+        self.triggered_at = None
+        
+    def check_condition(self, current_price):
+        """Check if the alert condition is met.
+        
+        Args:
+            current_price (float): The current price of the cryptocurrency
+            
+        Returns:
+            bool: True if the alert condition is met, False otherwise
+        """
+        if not self.triggered:
+            if self.alert_type == 'above' and current_price >= self.target_price:
+                return True
+            elif self.alert_type == 'below' and current_price <= self.target_price:
+                return True
+        return False
+        
+    def trigger(self):
+        """Mark the alert as triggered."""
+        self.triggered = True
+        self.triggered_at = datetime.datetime.now().isoformat()
+        
+    def to_dict(self):
+        """Convert the alert to a dictionary for serialization.
+        
+        Returns:
+            dict: A dictionary representation of the alert
+        """
+        return {
+            'coin_id': self.coin_id,
+            'target_price': self.target_price,
+            'alert_type': self.alert_type,
+            'username': self.username,
+            'created_at': self.created_at,
+            'triggered': self.triggered,
+            'triggered_at': self.triggered_at
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        """Create an alert from a dictionary.
+        
+        Args:
+            data (dict): A dictionary representation of the alert
+            
+        Returns:
+            PriceAlert: A PriceAlert instance
+        """
+        alert = cls(
+            data['coin_id'],
+            data['target_price'],
+            data['alert_type'],
+            data['username']
+        )
+        alert.created_at = data['created_at']
+        alert.triggered = data['triggered']
+        alert.triggered_at = data['triggered_at']
+        return alert
+
+class AlertManager:
+    """A class to manage multiple price alerts."""
+    
+    def __init__(self):
+        """Initialize the alert manager."""
+        self.alerts = []
+        self.running = False
+        self.check_interval = 60  # seconds between price checks
+        self.last_price_check = {}  # cache of last price check
+        
+    def add_alert(self, alert):
+        """Add a price alert.
+        
+        Args:
+            alert (PriceAlert): The alert to add
+        """
+        self.alerts.append(alert)
+        self.save_alerts()
+        
+    def remove_alert(self, alert_index):
+        """Remove a price alert.
+        
+        Args:
+            alert_index (int): The index of the alert to remove
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            del self.alerts[alert_index]
+            self.save_alerts()
+            return True
+        except IndexError:
+            return False
+            
+    def get_alerts_by_username(self, username):
+        """Get all alerts for a specific user.
+        
+        Args:
+            username (str): The username to filter by
+            
+        Returns:
+            list: A list of alerts for the user
+        """
+        return [alert for alert in self.alerts if alert.username == username]
+    
+    def save_alerts(self):
+        """Save all alerts to a file."""
+        try:
+            os.makedirs('alerts', exist_ok=True)
+            
+            alerts_data = [alert.to_dict() for alert in self.alerts]
+            
+            with open('alerts/alerts.json', 'w') as f:
+                json.dump(alerts_data, f, indent=2)
+                
+            return True
+        except Exception as e:
+            print(f"Error saving alerts: {e}")
+            return False
+    
+    def load_alerts(self):
+        """Load alerts from a file."""
+        try:
+            if not os.path.exists('alerts/alerts.json'):
+                return
+                
+            with open('alerts/alerts.json', 'r') as f:
+                alerts_data = json.load(f)
+                
+            self.alerts = [PriceAlert.from_dict(data) for data in alerts_data]
+        except Exception as e:
+            print(f"Error loading alerts: {e}")
+    
+    def check_alerts(self):
+        """Check all active alerts against current prices."""
+        try:
+            # Only check prices for coins with active alerts
+            coins_to_check = set(alert.coin_id for alert in self.alerts if not alert.triggered)
+            if not coins_to_check:
+                return []
+                
+            cg = CoinGeckoAPI()
+            prices = cg.get_price(ids=list(coins_to_check), vs_currencies='usd')
+            
+            triggered_alerts = []
+            
+            for i, alert in enumerate(self.alerts):
+                if alert.triggered:
+                    continue
+                    
+                if alert.coin_id in prices:
+                    current_price = prices[alert.coin_id]['usd']
+                    self.last_price_check[alert.coin_id] = current_price
+                    
+                    if alert.check_condition(current_price):
+                        alert.trigger()
+                        triggered_alerts.append((i, alert, current_price))
+            
+            if triggered_alerts:
+                self.save_alerts()
+                
+            return triggered_alerts
+        except Exception as e:
+            print(f"Error checking alerts: {e}")
+            return []
+    
+    def start_monitoring(self):
+        """Start the alert monitoring process in a background thread."""
+        if self.running:
+            return False
+            
+        self.running = True
+        self.monitor_thread = Thread(target=self._monitoring_loop)
+        self.monitor_thread.daemon = True
+        self.monitor_thread.start()
+        return True
+        
+    def stop_monitoring(self):
+        """Stop the alert monitoring process."""
+        self.running = False
+        
+    def _monitoring_loop(self):
+        """The main monitoring loop that runs in a background thread."""
+        while self.running:
+            triggered = self.check_alerts()
+            
+            for _, alert, price in triggered:
+                direction = "above" if alert.alert_type == "above" else "below"
+                print(f"🔔 ALERT: {alert.coin_id.capitalize()} price is now {direction} ${alert.target_price} (Current: ${price})")
+                
+            time.sleep(self.check_interval)
 
 def setup_dependencies():
     """Install and download required dependencies."""
@@ -179,26 +395,47 @@ def calculate_technical_indicators(historical_data):
     sma_7 = sum(prices[-7:]) / 7 if len(prices) >= 7 else None
     sma_30 = sum(prices[-30:]) / 30 if len(prices) >= 30 else None
     
-    # Calculate Relative Strength Index (RSI) - simplified version
-    gains = []
-    losses = []
-    for i in range(1, len(prices)):
-        change = prices[i] - prices[i-1]
-        if change >= 0:
-            gains.append(change)
-            losses.append(0)
-        else:
-            gains.append(0)
-            losses.append(abs(change))
-    
-    # Use last 14 periods for RSI if available
-    rsi_period = 14
-    if len(gains) >= rsi_period:
-        avg_gain = sum(gains[-rsi_period:]) / rsi_period
-        avg_loss = sum(losses[-rsi_period:]) / rsi_period
+    # Calculate exponential moving averages (EMA)
+    def calculate_ema(data, period, smoothing=2):
+        ema = [data[0]]  # Start with first data point
+        multiplier = smoothing / (1 + period)
         
+        for price in data[1:]:
+            ema.append((price * multiplier) + (ema[-1] * (1 - multiplier)))
+            
+        return ema
+    
+    # Calculate EMA if we have enough data points
+    ema_12 = None
+    ema_26 = None
+    if len(prices) >= 26:
+        ema_12_full = calculate_ema(prices, 12)
+        ema_26_full = calculate_ema(prices, 26)
+        ema_12 = ema_12_full[-1]
+        ema_26 = ema_26_full[-1]
+    
+    # Calculate Relative Strength Index (RSI) - Enhanced version
+    rsi_period = 14
+    if len(prices) >= rsi_period + 1:
+        # Calculate price changes
+        changes = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+        
+        # Separate gains and losses
+        gains = [max(0, change) for change in changes]
+        losses = [abs(min(0, change)) for change in changes]
+        
+        # Calculate initial average gain and loss
+        avg_gain = sum(gains[:rsi_period]) / rsi_period
+        avg_loss = sum(losses[:rsi_period]) / rsi_period
+        
+        # Use Wilder's smoothing method for subsequent values
+        for i in range(rsi_period, len(changes)):
+            avg_gain = (avg_gain * (rsi_period - 1) + gains[i]) / rsi_period
+            avg_loss = (avg_loss * (rsi_period - 1) + losses[i]) / rsi_period
+        
+        # Calculate RS and RSI
         if avg_loss == 0:
-            rsi = 100
+            rsi = 100  # Prevent division by zero
         else:
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
@@ -215,32 +452,78 @@ def calculate_technical_indicators(historical_data):
     else:
         volatility_percent = None
     
-    # Calculate MACD (Moving Average Convergence Divergence) - simplified
-    if len(prices) >= 26:
-        ema_12 = sum(prices[-12:]) / 12  # Using SMA as approximation
-        ema_26 = sum(prices[-26:]) / 26  # Using SMA as approximation
+    # Calculate MACD (Moving Average Convergence Divergence) - Enhanced
+    macd = None
+    macd_signal = None
+    macd_histogram = None
+    
+    if ema_12 is not None and ema_26 is not None:
         macd = ema_12 - ema_26
+        
+        # Calculate MACD signal line (9-day EMA of MACD)
+        if len(prices) >= 35:  # Need at least 26 + 9 data points
+            macd_line = [ema_12_full[i] - ema_26_full[i] for i in range(len(ema_26_full))]
+            macd_signal_line = calculate_ema(macd_line, 9)
+            macd_signal = macd_signal_line[-1]
+            macd_histogram = macd - macd_signal
+    
+    # Calculate Bollinger Bands
+    bollinger_period = 20
+    if len(prices) >= bollinger_period:
+        sma_20 = sum(prices[-bollinger_period:]) / bollinger_period
+        
+        # Calculate standard deviation for the period
+        squared_diffs = [(price - sma_20) ** 2 for price in prices[-bollinger_period:]]
+        std_dev = (sum(squared_diffs) / bollinger_period) ** 0.5
+        
+        upper_band = sma_20 + (2 * std_dev)
+        lower_band = sma_20 - (2 * std_dev)
+        
+        # Determine if price is near upper or lower band (potential reversal)
+        current_price = prices[-1]
+        band_position = None
+        
+        if current_price > upper_band * 0.95:
+            band_position = 'upper'
+        elif current_price < lower_band * 1.05:
+            band_position = 'lower'
+        else:
+            band_position = 'middle'
     else:
-        macd = None
+        upper_band = None
+        lower_band = None
+        band_position = None
     
     # Price momentum (percentage change)
-    if len(prices) >= 7:
-        momentum_7d = ((prices[-1] / prices[-7]) - 1) * 100
-    else:
-        momentum_7d = None
+    momentum_periods = [1, 7, 14, 30]
+    momentum = {}
     
+    for period in momentum_periods:
+        if len(prices) >= period + 1:
+            momentum[f'{period}d'] = ((prices[-1] / prices[-(period+1)]) - 1) * 100
+    
+    # Return enhanced technical indicators
     return {
         'current_price': prices[-1] if prices else None,
         'sma_7': sma_7,
         'sma_30': sma_30,
+        'ema_12': ema_12,
+        'ema_26': ema_26,
         'rsi': rsi,
         'volatility': volatility_percent,
         'macd': macd,
-        'momentum_7d': momentum_7d,
+        'macd_signal': macd_signal,
+        'macd_histogram': macd_histogram,
+        'bollinger': {
+            'upper': upper_band,
+            'lower': lower_band,
+            'position': band_position
+        },
+        'momentum': momentum,
         'trend_signal': get_trend_signal(sma_7, sma_30, rsi, macd) if all(x is not None for x in [sma_7, sma_30, rsi, macd]) else 'neutral'
     }
 
-def get_trend_signal(sma_7, sma_30, rsi, macd):
+def get_trend_signal(sma_7, sma_30, rsi, macd, indicators=None):
     """Determine trend signal based on technical indicators.
     
     Args:
@@ -248,46 +531,117 @@ def get_trend_signal(sma_7, sma_30, rsi, macd):
         sma_30 (float): 30-day simple moving average
         rsi (float): Relative Strength Index
         macd (float): Moving Average Convergence Divergence
+        indicators (dict, optional): Full technical indicators dictionary for additional signals
         
     Returns:
-        str: 'bullish', 'bearish', or 'neutral'
+        dict: Contains overall trend signal and confidence score along with individual signals
     """
     signals = []
+    signal_details = {}
     
     # SMA signal
     if sma_7 > sma_30:
         signals.append('bullish')
+        signal_details['sma_crossover'] = 'bullish'
     elif sma_7 < sma_30:
         signals.append('bearish')
+        signal_details['sma_crossover'] = 'bearish'
     else:
         signals.append('neutral')
+        signal_details['sma_crossover'] = 'neutral'
     
     # RSI signal
-    if rsi < 30:
-        signals.append('bullish')  # Oversold
-    elif rsi > 70:
-        signals.append('bearish')  # Overbought
-    else:
-        signals.append('neutral')
+    if rsi is not None:
+        if rsi < 30:
+            signals.append('bullish')  # Oversold
+            signal_details['rsi'] = 'bullish (oversold)'
+        elif rsi > 70:
+            signals.append('bearish')  # Overbought
+            signal_details['rsi'] = 'bearish (overbought)'
+        else:
+            signals.append('neutral')
+            signal_details['rsi'] = 'neutral'
     
     # MACD signal
-    if macd > 0:
-        signals.append('bullish')
-    elif macd < 0:
-        signals.append('bearish')
-    else:
-        signals.append('neutral')
+    if macd is not None:
+        if macd > 0:
+            signals.append('bullish')
+            signal_details['macd'] = 'bullish'
+        elif macd < 0:
+            signals.append('bearish')
+            signal_details['macd'] = 'bearish'
+        else:
+            signals.append('neutral')
+            signal_details['macd'] = 'neutral'
+    
+    # Additional signals from the full indicators dictionary if provided
+    if indicators:
+        # Bollinger Bands signal
+        if 'bollinger' in indicators and indicators['bollinger']['position']:
+            if indicators['bollinger']['position'] == 'lower':
+                signals.append('bullish')  # Price near lower band suggests potential upward reversal
+                signal_details['bollinger'] = 'bullish (near lower band)'
+            elif indicators['bollinger']['position'] == 'upper':
+                signals.append('bearish')  # Price near upper band suggests potential downward reversal
+                signal_details['bollinger'] = 'bearish (near upper band)'
+            else:
+                signals.append('neutral')
+                signal_details['bollinger'] = 'neutral (middle band)'
+        
+        # MACD histogram signal (momentum)
+        if 'macd_histogram' in indicators and indicators['macd_histogram'] is not None:
+            if indicators['macd_histogram'] > 0 and indicators['macd_histogram'] > indicators.get('macd', 0):
+                signals.append('bullish')
+                signal_details['macd_histogram'] = 'bullish (increasing)'
+            elif indicators['macd_histogram'] < 0 and indicators['macd_histogram'] < indicators.get('macd', 0):
+                signals.append('bearish')
+                signal_details['macd_histogram'] = 'bearish (decreasing)'
+            else:
+                signals.append('neutral')
+                signal_details['macd_histogram'] = 'neutral'
+        
+        # Recent momentum signal
+        if 'momentum' in indicators and '7d' in indicators['momentum']:
+            momentum_7d = indicators['momentum']['7d']
+            if momentum_7d > 5:  # 5% gain in 7 days
+                signals.append('bullish')
+                signal_details['momentum'] = f'bullish ({momentum_7d:.2f}% in 7d)'
+            elif momentum_7d < -5:  # 5% loss in 7 days
+                signals.append('bearish')
+                signal_details['momentum'] = f'bearish ({momentum_7d:.2f}% in 7d)'
+            else:
+                signals.append('neutral')
+                signal_details['momentum'] = f'neutral ({momentum_7d:.2f}% in 7d)'
     
     # Count signals
     bullish_count = signals.count('bullish')
     bearish_count = signals.count('bearish')
+    neutral_count = signals.count('neutral')
+    total_count = len(signals)
     
-    if bullish_count > bearish_count:
-        return 'bullish'
-    elif bearish_count > bullish_count:
-        return 'bearish'
+    # Calculate confidence score (0-100%)
+    if total_count > 0:
+        if bullish_count > bearish_count:
+            confidence = (bullish_count / total_count) * 100
+            overall_signal = 'bullish'
+        elif bearish_count > bullish_count:
+            confidence = (bearish_count / total_count) * 100
+            overall_signal = 'bearish'
+        else:
+            confidence = (neutral_count / total_count) * 100
+            overall_signal = 'neutral'
     else:
-        return 'neutral'
+        confidence = 0
+        overall_signal = 'neutral'
+    
+    return {
+        'signal': overall_signal,
+        'confidence': confidence,
+        'details': signal_details,
+        'bullish_count': bullish_count,
+        'bearish_count': bearish_count,
+        'neutral_count': neutral_count
+    }
     
 def get_synonyms(word):
     """Get synonyms for a word using WordNet."""
@@ -585,22 +939,49 @@ class UserProfile:
         try:
             import json
             import os
+            from datetime import datetime
             
             # Create profiles directory if it doesn't exist
             os.makedirs('profiles', exist_ok=True)
             
-            # Save profile as JSON
+            # Save profile with additional metadata
             profile_data = {
                 'username': self.username,
                 'favorite_coins': self.favorite_coins,
                 'risk_tolerance': self.risk_tolerance,
                 'sustainability_preference': self.sustainability_preference,
-                'investment_horizon': self.investment_horizon
+                'investment_horizon': self.investment_horizon,
+                'last_updated': datetime.now().isoformat(),
+                'version': '1.1'  # Version tracking for future compatibility
             }
             
-            with open(f'profiles/{self.username}.json', 'w') as f:
+            # Add price alerts if they exist
+            try:
+                alert_manager = AlertManager()
+                alert_manager.load_alerts()
+                user_alerts = alert_manager.get_alerts_by_username(self.username)
+                profile_data['active_alerts_count'] = len([a for a in user_alerts if not a.triggered])
+            except Exception:
+                profile_data['active_alerts_count'] = 0
+            
+            # Save the file with proper error handling
+            profile_path = f'profiles/{self.username}.json'
+            
+            # Create backup of existing file if it exists
+            if os.path.exists(profile_path):
+                try:
+                    backup_path = f'profiles/{self.username}.backup.json'
+                    with open(profile_path, 'r') as src:
+                        with open(backup_path, 'w') as dst:
+                            dst.write(src.read())
+                except Exception as backup_error:
+                    print(f"Warning: Failed to create profile backup: {backup_error}")
+            
+            # Write the new profile
+            with open(profile_path, 'w') as f:
                 json.dump(profile_data, f, indent=2)
                 
+            print(f"Profile saved successfully for {self.username}")
             return True
         except Exception as e:
             print(f"Error saving profile: {e}")
@@ -619,22 +1000,89 @@ class UserProfile:
         try:
             import json
             import os
+            from datetime import datetime
             
             profile_path = f'profiles/{username}.json'
             
+            # Create new profile if file doesn't exist
             if not os.path.exists(profile_path):
+                print(f"Creating new profile for {username}")
+                new_profile = cls(username)
+                new_profile.save_profile()  # Save the new profile
+                return new_profile
+            
+            # Try to load the profile
+            try:
+                with open(profile_path, 'r') as f:
+                    profile_data = json.load(f)
+                
+                profile = cls(username)
+                
+                # Load basic profile data
+                profile.favorite_coins = profile_data.get('favorite_coins', [])
+                profile.risk_tolerance = profile_data.get('risk_tolerance', 'medium')
+                profile.sustainability_preference = profile_data.get('sustainability_preference', 'medium')
+                profile.investment_horizon = profile_data.get('investment_horizon', 'medium')
+                
+                # Check profile version for future compatibility
+                profile_version = profile_data.get('version', '1.0')
+                current_version = '1.1'  # Update this when the profile structure changes
+                
+                if profile_version != current_version:
+                    print(f"Notice: Profile version {profile_version} found, current version is {current_version}.")
+                    print("The profile will be updated to the current version format.")
+                    profile.save_profile()  # Update to current version
+                
+                print(f"Profile loaded successfully for {username}")
+                
+                # Print last login time if available
+                if 'last_updated' in profile_data:
+                    try:
+                        last_updated = datetime.fromisoformat(profile_data['last_updated'])
+                        time_diff = datetime.now() - last_updated
+                        days = time_diff.days
+                        
+                        if days == 0:
+                            time_msg = "today"
+                        elif days == 1:
+                            time_msg = "yesterday"
+                        else:
+                            time_msg = f"{days} days ago"
+                        
+                        print(f"Last login: {time_msg}")
+                    except:
+                        pass
+                
+                return profile
+                
+            except json.JSONDecodeError:
+                print(f"Error: Profile file for {username} is corrupted.")
+                
+                # Try to restore from backup
+                backup_path = f'profiles/{username}.backup.json'
+                if os.path.exists(backup_path):
+                    print("Attempting to restore from backup...")
+                    try:
+                        with open(backup_path, 'r') as f:
+                            profile_data = json.load(f)
+                        
+                        profile = cls(username)
+                        profile.favorite_coins = profile_data.get('favorite_coins', [])
+                        profile.risk_tolerance = profile_data.get('risk_tolerance', 'medium')
+                        profile.sustainability_preference = profile_data.get('sustainability_preference', 'medium')
+                        profile.investment_horizon = profile_data.get('investment_horizon', 'medium')
+                        
+                        # Immediately save to restore the primary profile file
+                        profile.save_profile()
+                        print("Profile restored from backup.")
+                        return profile
+                    except Exception:
+                        print("Backup restoration failed.")
+                
+                # Creating new profile as fallback
+                print(f"Creating new profile for {username}")
                 return cls(username)
-            
-            with open(profile_path, 'r') as f:
-                profile_data = json.load(f)
-            
-            profile = cls(username)
-            profile.favorite_coins = profile_data.get('favorite_coins', [])
-            profile.risk_tolerance = profile_data.get('risk_tolerance', 'medium')
-            profile.sustainability_preference = profile_data.get('sustainability_preference', 'medium')
-            profile.investment_horizon = profile_data.get('investment_horizon', 'medium')
-            
-            return profile
+                
         except Exception as e:
             print(f"Error loading profile: {e}")
             return cls(username)
@@ -690,16 +1138,411 @@ class UserProfile:
         
         return recommendations
 
-def crypto_buddy_response(user_query):
-    """Generate chatbot response based on user query."""
+class PortfolioManager:
+    """A class to manage cryptocurrency portfolio suggestions."""
+    
+    def __init__(self):
+        """Initialize the portfolio manager."""
+        # Portfolio templates with risk profiles
+        self.portfolio_templates = {
+            'conservative': {
+                'bitcoin': 0.50,  # 50% allocation to Bitcoin
+                'ethereum': 0.30,  # 30% allocation to Ethereum
+                'cardano': 0.10,  # 10% allocation to Cardano
+                'solana': 0.05,   # 5% allocation to Solana
+                'polkadot': 0.05  # 5% allocation to Polkadot
+            },
+            'balanced': {
+                'bitcoin': 0.35,
+                'ethereum': 0.25,
+                'cardano': 0.15,
+                'solana': 0.10,
+                'polkadot': 0.05,
+                'chainlink': 0.05,
+                'avalanche-2': 0.05
+            },
+            'aggressive': {
+                'bitcoin': 0.20,
+                'ethereum': 0.20,
+                'cardano': 0.15,
+                'solana': 0.15,
+                'polkadot': 0.10,
+                'chainlink': 0.05,
+                'avalanche-2': 0.05,
+                'dogecoin': 0.05,
+                'near': 0.05
+            },
+            'eco_friendly': {
+                'ethereum': 0.30,
+                'cardano': 0.25,
+                'solana': 0.15,
+                'polkadot': 0.10,
+                'avalanche-2': 0.10,
+                'near': 0.10
+            },
+            'high_cap': {
+                'bitcoin': 0.50,
+                'ethereum': 0.30,
+                'solana': 0.10,
+                'cardano': 0.05,
+                'ripple': 0.05
+            }
+        }
+    
+    def get_portfolio_suggestion(self, risk_profile, investment_amount=1000):
+        """Get a portfolio suggestion based on risk profile.
+        
+        Args:
+            risk_profile (str): 'conservative', 'balanced', 'aggressive', 'eco_friendly', or 'high_cap'
+            investment_amount (float): The total investment amount
+            
+        Returns:
+            dict: A dictionary with coin allocations and amounts
+        """
+        if risk_profile not in self.portfolio_templates:
+            risk_profile = 'balanced'  # Default to balanced if risk profile not found
+            
+        template = self.portfolio_templates[risk_profile]
+        
+        # Get current prices
+        try:
+            cg = CoinGeckoAPI()
+            prices = cg.get_price(ids=list(template.keys()), vs_currencies='usd')
+            
+            portfolio = {
+                'risk_profile': risk_profile,
+                'total_amount': investment_amount,
+                'date_created': datetime.datetime.now().isoformat(),
+                'allocations': []
+            }
+            
+            for coin, allocation in template.items():
+                if coin in prices:
+                    amount = investment_amount * allocation
+                    coin_amount = amount / prices[coin]['usd']
+                    
+                    portfolio['allocations'].append({
+                        'coin': coin,
+                        'allocation_percentage': allocation * 100,
+                        'fiat_amount': amount,
+                        'coin_amount': coin_amount,
+                        'current_price': prices[coin]['usd']
+                    })
+            
+            return portfolio
+        except Exception as e:
+            print(f"Error generating portfolio: {e}")
+            return None
+    
+    def get_portfolio_recommendation_based_on_profile(self, user_profile):
+        """Get a portfolio recommendation based on user profile.
+        
+        Args:
+            user_profile (UserProfile): The user's profile
+            
+        Returns:
+            dict: A portfolio suggestion
+        """
+        # Map user preferences to portfolio risk profile
+        risk_mapping = {
+            'low': 'conservative',
+            'medium': 'balanced',
+            'high': 'aggressive'
+        }
+        
+        # If user has high sustainability preference, recommend eco_friendly portfolio
+        if user_profile.sustainability_preference == 'high':
+            risk_profile = 'eco_friendly'
+        else:
+            risk_profile = risk_mapping.get(user_profile.risk_tolerance, 'balanced')
+        
+        return self.get_portfolio_suggestion(risk_profile)
+    
+    def get_portfolio_performance(self, portfolio, days=30):
+        """Calculate the historical performance of a portfolio.
+        
+        Args:
+            portfolio (dict): A portfolio suggestion
+            days (int): Number of days to look back
+            
+        Returns:
+            dict: Performance metrics for the portfolio
+        """
+        try:
+            cg = CoinGeckoAPI()
+            performance = {
+                'initial_investment': portfolio['total_amount'],
+                'current_value': 0,
+                'percent_change': 0,
+                'coin_performance': []
+            }
+            
+            for allocation in portfolio['allocations']:
+                coin = allocation['coin']
+                
+                # Get historical data
+                historical_data = fetch_historical_data(coin, days)
+                if not historical_data or 'prices' not in historical_data:
+                    continue
+                
+                # Get current and past prices
+                current_price = historical_data['prices'][-1][1]
+                past_price = historical_data['prices'][0][1]
+                
+                # Calculate performance
+                initial_value = allocation['fiat_amount']
+                current_value = allocation['coin_amount'] * current_price
+                percent_change = ((current_price / past_price) - 1) * 100
+                
+                performance['current_value'] += current_value
+                
+                performance['coin_performance'].append({
+                    'coin': coin,
+                    'initial_value': initial_value,
+                    'current_value': current_value,
+                    'percent_change': percent_change
+                })
+            
+            # Calculate overall portfolio performance
+            if performance['initial_investment'] > 0:
+                performance['percent_change'] = ((performance['current_value'] / performance['initial_investment']) - 1) * 100
+                
+            return performance
+        except Exception as e:
+            print(f"Error calculating portfolio performance: {e}")
+            return None
+
+def crypto_buddy_response(user_query, user_profile=None):
+    """Generate chatbot response based on user query.
+    
+    Args:
+        user_query (str): The user's query text
+        user_profile (UserProfile, optional): User profile for personalized responses
+        
+    Returns:
+        str: Chatbot response
+    """
     # Fetch real-time data
     crypto_db = fetch_crypto_data()
     if not crypto_db:
         return "Oops! Couldn't fetch data from CoinGecko. Try again later! 😅"
 
-    # Interpret query intent using NLTK
+    # Interpret query intent using NLP
     intent = interpret_query(user_query)
     
+    # Check for special commands in the query
+    query_lower = user_query.lower()
+    
+    # Handle portfolio suggestions
+    if "portfolio" in query_lower or "diversify" in query_lower or "allocation" in query_lower:
+        portfolio_manager = PortfolioManager()
+        
+        # Determine risk profile from the query or user preferences
+        risk_profile = 'balanced'  # Default
+        
+        if "conservative" in query_lower or "safe" in query_lower or "low risk" in query_lower:
+            risk_profile = 'conservative'
+        elif "aggressive" in query_lower or "high risk" in query_lower or "growth" in query_lower:
+            risk_profile = 'aggressive'
+        elif "eco" in query_lower or "green" in query_lower or "sustainable" in query_lower:
+            risk_profile = 'eco_friendly'
+        elif "blue chip" in query_lower or "established" in query_lower:
+            risk_profile = 'high_cap'
+        elif user_profile:
+            # Use user preferences if available
+            if user_profile.sustainability_preference == 'high':
+                risk_profile = 'eco_friendly'
+            elif user_profile.risk_tolerance == 'low':
+                risk_profile = 'conservative'
+            elif user_profile.risk_tolerance == 'high':
+                risk_profile = 'aggressive'
+        
+        # Get investment amount from query if mentioned
+        investment_amount = 1000  # Default
+        import re
+        amount_matches = re.findall(r'(\$?\d+(?:,\d+)*(?:\.\d+)?)\s*(?:dollars|usd)?', query_lower)
+        if amount_matches:
+            try:
+                # Remove $ and commas, then convert to float
+                amount_str = amount_matches[0].replace('$', '').replace(',', '')
+                investment_amount = float(amount_str)
+            except ValueError:
+                pass  # Use default if conversion fails
+        
+        # Generate portfolio suggestion
+        portfolio = portfolio_manager.get_portfolio_suggestion(risk_profile, investment_amount)
+        
+        if portfolio:
+            # Create a nicely formatted portfolio response
+            greeting = get_greeting()
+            disclaimer = get_disclaimer()
+            
+            response = greeting + disclaimer
+            response += f"Here's a {risk_profile} portfolio allocation for ${investment_amount:.2f}:\n\n"
+            
+            for coin in portfolio['allocations']:
+                coin_name = coin['coin'].capitalize()
+                percentage = coin['allocation_percentage']
+                usd_amount = coin['fiat_amount']
+                coin_amount = coin['coin_amount']
+                response += f"• {coin_name}: {percentage:.1f}% (${usd_amount:.2f} ≈ {coin_amount:.6f} {coin_name})\n"
+            
+            response += "\nThis allocation balances risk and potential returns based on current market conditions! 📊\n"
+            response += "Remember to periodically rebalance your portfolio to maintain your target allocation. 🔄"
+            
+            return response
+    
+    # Handle price alerts
+    elif "alert" in query_lower or "notify" in query_lower or "when price" in query_lower:
+        if not user_profile:
+            return "You need to be logged in to set price alerts! Please log in or create a profile first."
+        
+        # Extract the coin and target price from the query
+        coin_matches = re.findall(r'(bitcoin|btc|ethereum|eth|cardano|ada|solana|sol|polkadot|dot|ripple|xrp|dogecoin|doge|avalanche|avax|chainlink|link|polygon|matic|near)', query_lower)
+        price_matches = re.findall(r'(\$?\d+(?:,\d+)*(?:\.\d+)?)', query_lower)
+        
+        if coin_matches and price_matches:
+            # Map common abbreviations to full coin IDs
+            coin_map = {
+                'btc': 'bitcoin', 'eth': 'ethereum', 'ada': 'cardano',
+                'sol': 'solana', 'dot': 'polkadot', 'xrp': 'ripple',
+                'doge': 'dogecoin', 'avax': 'avalanche-2', 'link': 'chainlink',
+                'matic': 'polygon', 'near': 'near'
+            }
+            
+            # Get the coin ID
+            coin = coin_matches[0].lower()
+            coin_id = coin_map.get(coin, coin)  # Use the mapping or keep as is
+            
+            # Get the target price
+            target_price = price_matches[0].replace('$', '').replace(',', '')
+            try:
+                target_price = float(target_price)
+            except ValueError:
+                return "I couldn't understand the target price. Please try again with a clear price value."
+            
+            # Determine if this is an 'above' or 'below' alert
+            alert_type = 'above'
+            if 'below' in query_lower or 'under' in query_lower or 'drops' in query_lower or 'fall' in query_lower:
+                alert_type = 'below'
+            
+            # Create the alert
+            alert = PriceAlert(coin_id, target_price, alert_type, user_profile.username)
+            
+            # Add to alert manager
+            alert_manager = AlertManager()
+            alert_manager.load_alerts()
+            alert_manager.add_alert(alert)
+            
+            # Start monitoring if it's not already running
+            alert_manager.start_monitoring()
+            
+            # Format a nice response
+            direction = "rises above" if alert_type == 'above' else "falls below"
+            coin_name = coin_id.capitalize()
+            response = f"🔔 Alert set! I'll notify you when {coin_name} {direction} ${target_price:.2f} USD.\n"
+            response += f"You currently have {len(alert_manager.get_alerts_by_username(user_profile.username))} active alerts."
+            
+            return response
+    
+    # Handle technical analysis requests
+    elif "analysis" in query_lower or "technical" in query_lower or "indicator" in query_lower:
+        # Extract the coin from the query
+        coin_matches = re.findall(r'(bitcoin|btc|ethereum|eth|cardano|ada|solana|sol|polkadot|dot|ripple|xrp|dogecoin|doge|avalanche|avax|chainlink|link|polygon|matic|near)', query_lower)
+        
+        if coin_matches:
+            # Map abbreviations to full coin IDs
+            coin_map = {
+                'btc': 'bitcoin', 'eth': 'ethereum', 'ada': 'cardano',
+                'sol': 'solana', 'dot': 'polkadot', 'xrp': 'ripple',
+                'doge': 'dogecoin', 'avax': 'avalanche-2', 'link': 'chainlink',
+                'matic': 'polygon', 'near': 'near'
+            }
+            
+            # Get the coin ID
+            coin = coin_matches[0].lower()
+            coin_id = coin_map.get(coin, coin)
+            
+            # Determine the analysis period
+            days = 30  # Default to 30 days
+            if "week" in query_lower or "7 day" in query_lower:
+                days = 7
+            elif "month" in query_lower or "30 day" in query_lower:
+                days = 30
+            elif "quarter" in query_lower or "90 day" in query_lower:
+                days = 90
+            
+            # Fetch historical data and calculate indicators
+            historical_data = fetch_historical_data(coin_id, days)
+            if historical_data:
+                indicators = calculate_technical_indicators(historical_data)
+                
+                if indicators:
+                    # Get trend signal with full indicators
+                    trend_result = get_trend_signal(
+                        indicators['sma_7'], 
+                        indicators['sma_30'], 
+                        indicators['rsi'], 
+                        indicators['macd'], 
+                        indicators
+                    )
+                    
+                    # Format a nice technical analysis response
+                    greeting = get_greeting()
+                    disclaimer = get_disclaimer()
+                    
+                    response = greeting + disclaimer
+                    response += f"Here's my {days}-day technical analysis for {coin_id.capitalize()}:\n\n"
+                    
+                    # Current price
+                    current_price = indicators['current_price']
+                    response += f"Current Price: ${current_price:.2f} USD\n\n"
+                    
+                    # Overall signal with confidence
+                    signal = trend_result['signal'].capitalize()
+                    confidence = trend_result['confidence']
+                    response += f"📊 Overall Signal: {signal} (Confidence: {confidence:.1f}%)\n\n"
+                    
+                    # Key indicators summary
+                    response += "Key Indicators:\n"
+                    
+                    # RSI
+                    if indicators['rsi'] is not None:
+                        rsi = indicators['rsi']
+                        rsi_status = "Oversold! 📉" if rsi < 30 else "Overbought! 📈" if rsi > 70 else "Neutral ⚖️"
+                        response += f"• RSI: {rsi:.1f} - {rsi_status}\n"
+                    
+                    # Moving Averages
+                    if indicators['sma_7'] is not None and indicators['sma_30'] is not None:
+                        sma_status = "Bullish ⬆️" if indicators['sma_7'] > indicators['sma_30'] else "Bearish ⬇️"
+                        response += f"• Moving Average Crossover: {sma_status}\n"
+                    
+                    # MACD
+                    if indicators['macd'] is not None:
+                        macd_status = "Bullish ⬆️" if indicators['macd'] > 0 else "Bearish ⬇️"
+                        response += f"• MACD: {macd_status}\n"
+                    
+                    # Bollinger Bands
+                    if 'bollinger' in indicators and indicators['bollinger']['position']:
+                        band_position = indicators['bollinger']['position']
+                        band_desc = "Approaching resistance (possible reversal)" if band_position == 'upper' else "Approaching support (possible bounce)" if band_position == 'lower' else "Within trading range"
+                        response += f"• Bollinger Bands: {band_desc}\n"
+                    
+                    # Momentum
+                    if 'momentum' in indicators and '7d' in indicators['momentum']:
+                        momentum = indicators['momentum']['7d']
+                        response += f"• 7-Day Momentum: {momentum:.2f}%\n"
+                    
+                    # Additional summary and advice
+                    if trend_result['signal'] == 'bullish':
+                        response += "\n🔍 Analysis: Technical indicators suggest positive momentum. Consider watching for entry points."
+                    elif trend_result['signal'] == 'bearish':
+                        response += "\n🔍 Analysis: Technical indicators suggest downward pressure. Consider caution or hedging strategies."
+                    else:
+                        response += "\n🔍 Analysis: Technical indicators are mixed. The market appears to be consolidating."
+                    
+                    return response
+                
     # Friendly greeting and ethics disclaimer
     greeting = get_greeting()
     disclaimer = get_disclaimer()
@@ -707,7 +1550,7 @@ def crypto_buddy_response(user_query):
     # Initialize response
     response = greeting + disclaimer
     
-    # Logic for handling user intents
+    # Logic for handling standard user intents
     if intent == 'trending':
         # Find coins with rising price trend and high market cap
         rising_coins = [
@@ -715,7 +1558,28 @@ def crypto_buddy_response(user_query):
             if crypto_db[coin]["price_trend"] == "rising" and crypto_db[coin]["market_cap"] == "high"
         ]
         if rising_coins:
-            response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"])
+            # Add technical analysis data for the recommended coin if available
+            try:
+                coin = rising_coins[0].lower()
+                historical_data = fetch_historical_data(coin)
+                if historical_data:
+                    indicators = calculate_technical_indicators(historical_data)
+                    if indicators and indicators['trend_signal'] and isinstance(indicators['trend_signal'], dict):
+                        signal = indicators['trend_signal']['signal']
+                        confidence = indicators['trend_signal']['confidence']
+                        technical_info = f"\nTechnical analysis shows a {signal} trend with {confidence:.1f}% confidence. "
+                        if 'rsi' in indicators and indicators['rsi']:
+                            technical_info += f"RSI is at {indicators['rsi']:.1f}. "
+                        if 'momentum' in indicators and '7d' in indicators['momentum']:
+                            technical_info += f"7-day momentum is {indicators['momentum']['7d']:.2f}%."
+                        response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"]) + technical_info
+                    else:
+                        response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"])
+                else:
+                    response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"])
+            except Exception:
+                # Fallback to standard response if technical analysis fails
+                response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"])
         else:
             response += get_no_trending_response()
     
@@ -739,9 +1603,21 @@ def crypto_buddy_response(user_query):
             response += get_no_longterm_response()
     
     else:  # General intent
-        # General recommendation based on balanced criteria
-        recommend = max(crypto_db, key=lambda x: (crypto_db[x]["sustainability_score"], 1 if crypto_db[x]["price_trend"] == "rising" else 0))
-        response += get_general_response(recommend, crypto_db[recommend]['price_trend'], crypto_db[recommend]['sustainability_score'])
+        # If user profile exists, provide personalized recommendations
+        if user_profile:
+            personalized_recommendations = user_profile.get_personalized_recommendations(crypto_db)
+            if personalized_recommendations:
+                top_coin, _ = personalized_recommendations[0]
+                response += get_general_response(top_coin, crypto_db[top_coin]['price_trend'], crypto_db[top_coin]['sustainability_score'])
+                response += f"\nThis recommendation is personalized based on your profile preferences! 🎯"
+            else:
+                # General recommendation based on balanced criteria if personalization fails
+                recommend = max(crypto_db, key=lambda x: (crypto_db[x]["sustainability_score"], 1 if crypto_db[x]["price_trend"] == "rising" else 0))
+                response += get_general_response(recommend, crypto_db[recommend]['price_trend'], crypto_db[recommend]['sustainability_score'])
+        else:
+            # General recommendation based on balanced criteria
+            recommend = max(crypto_db, key=lambda x: (crypto_db[x]["sustainability_score"], 1 if crypto_db[x]["price_trend"] == "rising" else 0))
+            response += get_general_response(recommend, crypto_db[recommend]['price_trend'], crypto_db[recommend]['sustainability_score'])
     
     return response
 
@@ -754,6 +1630,10 @@ def run_crypto_buddy():
     print("  - Which crypto is trending right now?")
     print("  - Tell me about sustainable cryptocurrencies")
     print("  - What's good for long term investment?")
+    print("  - Suggest a balanced portfolio for $2000")
+    print("  - Set an alert for Bitcoin when price goes above $50000")
+    print("  - Show me a technical analysis of Ethereum")
+    print("  - Give me historical performance data for Cardano")
     print("===============================================\n")
     
     # Load user profile
@@ -761,17 +1641,253 @@ def run_crypto_buddy():
     user_profile = UserProfile.load_profile(username)
     print(f"Welcome back, {user_profile.username}! Your preferences have been loaded. 😊")
     
+    # Initialize alert manager and start monitoring in the background
+    alert_manager = AlertManager()
+    alert_manager.load_alerts()
+    
+    # Check for existing alerts
+    user_alerts = alert_manager.get_alerts_by_username(username)
+    active_alerts = [a for a in user_alerts if not a.triggered]
+    
+    if active_alerts:
+        print(f"You have {len(active_alerts)} active price alerts.")
+        
+    # Start monitoring
+    if active_alerts:
+        alert_manager.start_monitoring()
+        print("Alert monitoring is active! You'll be notified when price conditions are met.")
+    
+    # Command help information
+    help_info = """
+Available commands:
+- /help - Show this help message
+- /profile - View and update your user profile
+- /alerts - Manage your price alerts
+- /portfolio - Get personalized portfolio suggestions
+- /analyze <coin> - Get technical analysis for a cryptocurrency
+- /exit - Exit the chatbot
+"""
+    
     while True:
         user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit", "bye"]:
+        
+        # Handle special commands
+        if user_input.lower() in ["exit", "quit", "bye", "/exit"]:
+            user_profile.save_profile()  # Save profile before exiting
             print("CryptoBuddy: Catch you later! Stay savvy! 👋")
             break
-        response = crypto_buddy_response(user_input)
+            
+        elif user_input.lower() == "/help":
+            print(help_info)
+            continue
+            
+        elif user_input.lower() == "/profile":
+            print("\n=== Your Profile ===")
+            print(f"Username: {user_profile.username}")
+            print(f"Favorite coins: {', '.join(user_profile.favorite_coins) if user_profile.favorite_coins else 'None'}")
+            print(f"Risk tolerance: {user_profile.risk_tolerance}")
+            print(f"Sustainability preference: {user_profile.sustainability_preference}")
+            print(f"Investment horizon: {user_profile.investment_horizon}")
+            
+            update = input("\nWould you like to update your profile? (yes/no): ")
+            if update.lower() in ["yes", "y"]:
+                # Update risk tolerance
+                risk = input("Risk tolerance (low/medium/high) [current: {}]: ".format(user_profile.risk_tolerance))
+                if risk in ["low", "medium", "high"]:
+                    user_profile.set_risk_tolerance(risk)
+                
+                # Update sustainability preference
+                sustainability = input("Sustainability preference (low/medium/high) [current: {}]: ".format(user_profile.sustainability_preference))
+                if sustainability in ["low", "medium", "high"]:
+                    user_profile.set_sustainability_preference(sustainability)
+                
+                # Update investment horizon
+                horizon = input("Investment horizon (short/medium/long) [current: {}]: ".format(user_profile.investment_horizon))
+                if horizon in ["short", "medium", "long"]:
+                    user_profile.set_investment_horizon(horizon)
+                
+                # Update favorite coins
+                favorites = input("Favorite coins (comma-separated) [current: {}]: ".format(', '.join(user_profile.favorite_coins) if user_profile.favorite_coins else 'None'))
+                if favorites.strip():
+                    user_profile.favorite_coins = [coin.strip() for coin in favorites.split(',')]
+                
+                # Save updated profile
+                if user_profile.save_profile():
+                    print("Profile updated successfully! 👍")
+                else:
+                    print("Failed to save profile. 😢")
+            continue
+            
+        elif user_input.lower() == "/alerts":
+            user_alerts = alert_manager.get_alerts_by_username(username)
+            
+            if not user_alerts:
+                print("You don't have any price alerts set.")
+                print("Try saying something like: 'Alert me when Bitcoin goes above $50000'")
+                continue
+                
+            print("\n=== Your Price Alerts ===")
+            for i, alert in enumerate(user_alerts):
+                status = "✅ TRIGGERED" if alert.triggered else "⏳ ACTIVE"
+                direction = "rises above" if alert.alert_type == 'above' else "falls below"
+                coin_name = alert.coin_id.capitalize()
+                print(f"{i+1}. {status} - {coin_name} {direction} ${alert.target_price:.2f}")
+                
+                if alert.triggered and alert.triggered_at:
+                    try:
+                        triggered_date = datetime.datetime.fromisoformat(alert.triggered_at)
+                        print(f"   Triggered on: {triggered_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                    except:
+                        pass
+            
+            action = input("\nWould you like to (d)elete an alert, (c)lear all, or (b)ack? ")
+            if action.lower() in ['d', 'delete']:
+                num = input("Enter alert number to delete: ")
+                try:
+                    index = int(num) - 1
+                    if 0 <= index < len(user_alerts):
+                        if alert_manager.remove_alert(alert_manager.alerts.index(user_alerts[index])):
+                            print("Alert deleted successfully!")
+                        else:
+                            print("Failed to delete the alert.")
+                    else:
+                        print("Invalid alert number.")
+                except ValueError:
+                    print("Please enter a valid number.")
+            elif action.lower() in ['c', 'clear']:
+                confirm = input("Are you sure you want to delete ALL your alerts? (yes/no): ")
+                if confirm.lower() in ["yes", "y"]:
+                    for alert in list(user_alerts):
+                        alert_manager.alerts.remove(alert)
+                    alert_manager.save_alerts()
+                    print("All alerts deleted.")
+            continue
+            
+        elif user_input.lower().startswith("/portfolio"):
+            portfolio_manager = PortfolioManager()
+            
+            # Check for investment amount in command
+            parts = user_input.split()
+            investment_amount = 1000  # Default
+            
+            if len(parts) > 1:
+                try:
+                    amount = parts[1].replace('$', '').replace(',', '')
+                    investment_amount = float(amount)
+                except ValueError:
+                    pass
+                    
+            # Get portfolio recommendation based on user profile
+            portfolio = portfolio_manager.get_portfolio_recommendation_based_on_profile(user_profile)
+            
+            if portfolio:
+                print(f"\n=== Personalized Portfolio Suggestion (${investment_amount:.2f}) ===")
+                print(f"Risk profile: {portfolio['risk_profile']}")
+                print("\nAllocation:")
+                
+                for coin in portfolio['allocations']:
+                    coin_name = coin['coin'].capitalize()
+                    percentage = coin['allocation_percentage']
+                    usd_amount = coin['fiat_amount']
+                    coin_amount = coin['coin_amount']
+                    print(f"• {coin_name}: {percentage:.1f}% (${usd_amount:.2f} ≈ {coin_amount:.6f} {coin_name})")
+                
+                # Get historical performance
+                performance = portfolio_manager.get_portfolio_performance(portfolio)
+                
+                if performance:
+                    print("\nHistorical Performance (30 days):")
+                    print(f"Initial investment: ${performance['initial_investment']:.2f}")
+                    print(f"Current value: ${performance['current_value']:.2f}")
+                    print(f"Overall change: {performance['percent_change']:.2f}%")
+                    
+                    # Show top and bottom performers
+                    if performance['coin_performance']:
+                        performances = sorted(performance['coin_performance'], key=lambda x: x['percent_change'], reverse=True)
+                        
+                        print("\nTop performer:")
+                        top = performances[0]
+                        print(f"{top['coin'].capitalize()}: {top['percent_change']:.2f}%")
+                        
+                        print("Bottom performer:")
+                        bottom = performances[-1]
+                        print(f"{bottom['coin'].capitalize()}: {bottom['percent_change']:.2f}%")
+            else:
+                print("Failed to generate portfolio recommendation.")
+                
+            continue
+            
+        elif user_input.lower().startswith("/analyze"):
+            # Extract coin from command
+            parts = user_input.split()
+            if len(parts) > 1:
+                coin = parts[1].lower()
+                
+                # Map abbreviations to full coin IDs
+                coin_map = {
+                    'btc': 'bitcoin', 'eth': 'ethereum', 'ada': 'cardano',
+                    'sol': 'solana', 'dot': 'polkadot', 'xrp': 'ripple',
+                    'doge': 'dogecoin', 'avax': 'avalanche-2', 'link': 'chainlink',
+                    'matic': 'polygon', 'near': 'near'
+                }
+                
+                coin_id = coin_map.get(coin, coin)
+                
+                # Get technical analysis
+                print(f"Analyzing {coin_id.capitalize()}...")
+                historical_data = fetch_historical_data(coin_id)
+                
+                if historical_data:
+                    indicators = calculate_technical_indicators(historical_data)
+                    
+                    if indicators:
+                        trend_result = get_trend_signal(
+                            indicators['sma_7'], 
+                            indicators['sma_30'], 
+                            indicators['rsi'], 
+                            indicators['macd'], 
+                            indicators
+                        )
+                        
+                        print(f"\n=== Technical Analysis: {coin_id.capitalize()} ===")
+                        print(f"Current Price: ${indicators['current_price']:.2f} USD")
+                        print(f"Signal: {trend_result['signal'].upper()} (Confidence: {trend_result['confidence']:.1f}%)")
+                        
+                        print("\nKey Indicators:")
+                        if indicators['rsi'] is not None:
+                            rsi_status = "OVERSOLD" if indicators['rsi'] < 30 else "OVERBOUGHT" if indicators['rsi'] > 70 else "NEUTRAL"
+                            print(f"RSI: {indicators['rsi']:.1f} - {rsi_status}")
+                            
+                        if indicators['sma_7'] and indicators['sma_30']:
+                            print(f"SMA 7: ${indicators['sma_7']:.2f}")
+                            print(f"SMA 30: ${indicators['sma_30']:.2f}")
+                            
+                        if 'bollinger' in indicators and indicators['bollinger']['upper']:
+                            print(f"Bollinger Upper: ${indicators['bollinger']['upper']:.2f}")
+                            print(f"Bollinger Lower: ${indicators['bollinger']['lower']:.2f}")
+                            
+                        if 'momentum' in indicators:
+                            for period, value in indicators['momentum'].items():
+                                print(f"Momentum {period}: {value:.2f}%")
+                    else:
+                        print("Failed to calculate technical indicators.")
+                else:
+                    print("Failed to fetch historical data for this coin.")
+            else:
+                print("Please specify a coin, e.g., /analyze bitcoin")
+                
+            continue
+            
+        # Process normal queries
+        response = crypto_buddy_response(user_input, user_profile)
         print("CryptoBuddy:", response)
+        
+        # Check for any triggered alerts after each response
+        triggered_alerts = alert_manager.check_alerts()
+        for _, alert, price in triggered_alerts:
+            if alert.username == username:
+                direction = "above" if alert.alert_type == "above" else "below"
+                print(f"\n🔔 ALERT: {alert.coin_id.capitalize()} price is now {direction} ${alert.target_price} (Current: ${price})")
+        
         # Respect CoinGecko's free API rate limit (30 calls/min)
         time.sleep(2)
-
-# Entry point
-if __name__ == "__main__":
-    setup_dependencies()
-    run_crypto_buddy()
