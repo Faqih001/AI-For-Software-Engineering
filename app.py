@@ -608,310 +608,64 @@ def display_technical_analysis():
                 st.error("Failed to fetch historical data.")
 
 def handle_buddy_chat(message):
-    # Process the chat message and get a response using all crypto buddy functionalities
-    response = None
     try:
         # Add message to chat history
         st.session_state.buddy_chat_history.append({"role": "user", "content": message})
         
-        # Interpret the user's query
-        intent = interpret_query(message.lower())
-        disclaimer = get_disclaimer()
+        # Initialize response
+        response = ""
         
-        if intent:
-            if intent.get('is_greeting', False):
-                response = f"{get_greeting()}\n\nI can help you with:\n"
-                response += "• Portfolio management and suggestions\n"
-                response += "• Price alerts and monitoring\n"
-                response += "• Technical analysis and trends\n"
-                response += "• Cryptocurrency market insights"
-                
-            elif intent.get('wants_trending', False):
-                trending_response = get_trending_response() if 'trending' in intent else get_no_trending_response()
-                response = f"🔥 Trending Analysis:\n\n{trending_response}"
-                
-            elif intent.get('wants_sustainable', False):
-                sustain_response = get_sustainable_response() if 'sustainable' in intent else get_less_sustainable_response()
-                response = f"🌱 Sustainability Analysis:\n\n{sustain_response}"
-                
-            elif intent.get('wants_longterm', False):
-                longterm_response = get_longterm_response() if 'longterm' in intent else get_no_longterm_response()
-                response = f"📈 Long-term Investment Perspective:\n\n{longterm_response}"
-                
-            elif "market" in message.lower() or "outlook" in message.lower():
-                # Add market overview using available data
-                coins = ["bitcoin", "ethereum", "cardano", "solana"]
-                market_response = "📊 Current Market Overview:\n\n"
-                
-                for coin in coins:
-                    data = fetch_crypto_data([coin])
-                    if data and coin in data:
-                        price = data[coin]['usd']
-                        change_24h = data[coin].get('usd_24h_change', 0)
-                        change_emoji = "📈" if change_24h > 0 else "📉"
-                        market_response += f"{change_emoji} {coin.capitalize()}: ${price:,.2f} ({change_24h:+.2f}%)\n"
-                
-                response = market_response
-                
-            elif "portfolio" in intent or "investment" in intent:
-                if st.session_state.user_profile:
-                    # Extract investment amount
-                    amount_match = re.search(r'\$?(\d+(?:,\d{3})*(?:\.\d{1,2})?)', message)
-                    investment_amount = 1000  # default
-                    if amount_match:
-                        investment_amount = float(amount_match.group(1).replace(',', ''))
-                    
-                    # Determine risk profile from message and user preferences
-                    risk_profile = 'balanced'  # default
-                    user_risk = st.session_state.user_profile.risk_tolerance
-                    
-                    if any(word in message.lower() for word in ['conservative', 'safe', 'low risk']):
-                        risk_profile = 'conservative'
-                    elif any(word in message.lower() for word in ['aggressive', 'high risk', 'risky']):
-                        risk_profile = 'aggressive'
-                    elif any(word in message.lower() for word in ['eco', 'sustainable', 'green']):
-                        risk_profile = 'eco_friendly'
-                    elif user_risk == 'low':
-                        risk_profile = 'conservative'
-                    elif user_risk == 'high':
-                        risk_profile = 'aggressive'
-                    
-                    portfolio = st.session_state.portfolio_manager.get_portfolio_suggestion(
-                        risk_profile,
-                        investment_amount
-                    )
-                    
-                    if portfolio:
-                        response = f"💼 {risk_profile.capitalize()} Portfolio (${investment_amount:,.2f})\n\n"
-                        response += "Allocation Strategy:\n"
-                        total_allocation = 0
-                        for alloc in portfolio['allocations']:
-                            response += f"• {alloc['coin'].capitalize()}: {alloc['allocation_percentage']:.1f}% (${alloc['fiat_amount']:,.2f})\n"
-                            total_allocation += alloc['allocation_percentage']
-                        
-                        performance = st.session_state.portfolio_manager.get_portfolio_performance(portfolio)
-                        if performance:
-                            response += f"\n📈 30-day Performance Analysis:\n"
-                            response += f"• Initial: ${performance['initial_investment']:,.2f}\n"
-                            response += f"• Current: ${performance['current_value']:,.2f}\n"
-                            response += f"• Change: {performance['percent_change']:+.2f}%\n\n"
-                            
-                            # Add coin-specific performance
-                            best_performer = max(performance['coin_performance'], key=lambda x: x['percent_change'])
-                            worst_performer = min(performance['coin_performance'], key=lambda x: x['percent_change'])
-                            
-                            response += "Notable Performers:\n"
-                            response += f"⭐ Best: {best_performer['coin'].capitalize()} ({best_performer['percent_change']:+.2f}%)\n"
-                            response += f"⚠️ Challenging: {worst_performer['coin'].capitalize()} ({worst_performer['percent_change']:+.2f}%)\n\n"
-                            
-                            # Add personalized advice based on performance and user profile
-                            response += "💡 Personalized Insights:\n"
-                            if performance['percent_change'] > 10:
-                                response += "• Consider taking some profits while maintaining core positions\n"
-                                if user_risk == 'low':
-                                    response += "• Given your conservative profile, consider rebalancing to lock in gains\n"
-                            elif performance['percent_change'] < -10:
-                                response += "• This could be a buying opportunity if you believe in long-term potential\n"
-                                if user_risk == 'high':
-                                    response += "• Given your risk tolerance, consider averaging down on strong assets\n"
-                            
-                            # Add sustainability note if relevant
-                            if st.session_state.user_profile.sustainability_preference == 'high':
-                                response += "\n🌱 Sustainability Note: Consider increasing allocation to eco-friendly cryptocurrencies"
-                else:
-                    response = "Please log in or create a profile to get personalized portfolio suggestions."
-                
-            elif "alert" in intent or "notify" in intent:
-                if st.session_state.user_profile:
-                    coins = {
-                        "bitcoin": "bitcoin", "btc": "bitcoin",
-                        "ethereum": "ethereum", "eth": "ethereum",
-                        "cardano": "cardano", "ada": "cardano",
-                        "solana": "solana", "sol": "solana",
-                        "polkadot": "polkadot", "dot": "polkadot",
-                        "ripple": "ripple", "xrp": "ripple",
-                        "dogecoin": "dogecoin", "doge": "dogecoin",
-                        "avalanche": "avalanche-2", "avax": "avalanche-2",
-                        "chainlink": "chainlink", "link": "chainlink",
-                        "polygon": "polygon", "matic": "polygon",
-                        "near": "near"
-                    }
-                    
-                    coin_id = None
-                    for key, value in coins.items():
-                        if key in message.lower():
-                            coin_id = value
-                            break
-                    
-                    price_match = re.search(r'\$?(\d+(?:,\d{3})*(?:\.\d{1,2})?)', message)
-                    if coin_id and price_match:
-                        price = float(price_match.group(1).replace(',', ''))
-                        alert_type = 'above' if any(word in message.lower() for word in ['above', 'over', 'exceeds', 'reaches', 'hits']) else 'below'
-                        
-                        # Get current price for context
-                        current_data = fetch_crypto_data([coin_id])
-                        if current_data and coin_id in current_data:
-                            current_price = current_data[coin_id]['usd']
-                            price_diff = abs(price - current_price)
-                            price_diff_percent = (price_diff / current_price) * 100
-                            
-                            # Get existing alerts for this coin
-                            existing_alerts = [a for a in st.session_state.alert_manager.get_alerts_by_username(
-                                st.session_state.user_profile.username) if a.coin_id == coin_id]
-                            
-                            alert = PriceAlert(coin_id, price, alert_type, st.session_state.user_profile.username)
-                            st.session_state.alert_manager.add_alert(alert)
-                            st.session_state.alert_manager.save_alerts()
-                            
-                            response = f"✅ Alert Set: {coin_id.capitalize()}\n\n"
-                            response += f"I'll notify you when the price goes {alert_type} ${price:,.2f}\n"
-                            response += f"Current price: ${current_price:,.2f}\n"
-                            if alert_type == 'above':
-                                response += f"Needed change: +${price_diff:,.2f} ({price_diff_percent:+.1f}%)\n"
-                            else:
-                                response += f"Needed change: -${price_diff:,.2f} ({price_diff_percent:+.1f}%)\n"
-                            
-                            if existing_alerts:
-                                response += f"\nℹ️ You have {len(existing_alerts)} other alert(s) for {coin_id.capitalize()}:"
-                                for a in existing_alerts:
-                                    response += f"\n• {a.alert_type.capitalize()}: ${a.target_price:,.2f}"
-                    else:
-                        response = "I need both a cryptocurrency and a target price to set an alert. Try something like:\n"
-                        response += "• 'Alert me when Bitcoin goes above $50,000'\n"
-                        response += "• 'Notify me if ETH drops below $2,000'"
-                else:
-                    response = "Please log in or create a profile to set price alerts."
-                
-            elif "analysis" in intent or "trend" in intent or "price" in intent:
-                coins = {
-                    "bitcoin": "bitcoin", "btc": "bitcoin",
-                    "ethereum": "ethereum", "eth": "ethereum",
-                    "cardano": "cardano", "ada": "cardano",
-                    "solana": "solana", "sol": "solana",
-                    "polkadot": "polkadot", "dot": "polkadot",
-                    "ripple": "ripple", "xrp": "ripple",
-                    "dogecoin": "dogecoin", "doge": "dogecoin",
-                    "avalanche": "avalanche-2", "avax": "avalanche-2",
-                    "chainlink": "chainlink", "link": "chainlink",
-                    "polygon": "polygon", "matic": "polygon",
-                    "near": "near"
-                }
-                
-                coin_id = None
-                for key, value in coins.items():
-                    if key in message.lower():
-                        coin_id = value
-                        break
-                
-                if coin_id:
-                    days = 30  # default
-                    if "week" in message.lower() or "7" in message:
-                        days = 7
-                    elif "month" in message.lower() or "30" in message:
-                        days = 30
-                    elif "90" in message or "quarter" in message.lower():
-                        days = 90
-                        
-                    historical_data = fetch_historical_data(coin_id, days)
-                    if historical_data:
-                        indicators = calculate_technical_indicators(historical_data)
-                        if indicators:
-                            trend_result = get_trend_signal(
-                                indicators['sma_7'],
-                                indicators['sma_30'],
-                                indicators['rsi'],
-                                indicators['macd'],
-                                indicators
-                            )
-                            
-                            # Create comprehensive analysis response
-                            response = f"📊 {coin_id.capitalize()} Analysis ({days} days)\n\n"
-                            
-                            # Price information
-                            response += f"💰 Price Metrics:\n"
-                            response += f"• Current: ${indicators['current_price']:,.2f}\n"
-                            if 'momentum' in indicators:
-                                for period, value in indicators['momentum'].items():
-                                    response += f"• {period.upper()} Change: {value:+.2f}%\n"
-                            
-                            # Technical indicators
-                            response += f"\n📈 Technical Signals:\n"
-                            
-                            # Moving Averages
-                            ma_trend = "BULLISH 📈" if indicators['sma_7'] > indicators['sma_30'] else "BEARISH 📉"
-                            response += f"• Moving Averages: {ma_trend}\n"
-                            response += f"• Signal: {trend_result['signal'].upper()}\n"
-                            response += f"• Confidence: {trend_result['confidence']:.1f}%\n"
-                            
-                            if indicators['rsi'] is not None:
-                                rsi = indicators['rsi']
-                                rsi_emoji = "⚠️" if rsi < 30 or rsi > 70 else "✅"
-                                rsi_status = "OVERSOLD" if rsi < 30 else "OVERBOUGHT" if rsi > 70 else "NEUTRAL"
-                                response += f"• RSI: {rsi:.1f} {rsi_emoji} ({rsi_status})\n"
-                            
-                            if indicators['macd'] is not None:
-                                macd_signal = "BULLISH 📈" if indicators['macd'] > 0 else "BEARISH 📉"
-                                response += f"• MACD: {macd_signal}\n"
-                            
-                            # Volume analysis
-                            if 'volume_change' in indicators:
-                                vol_change = indicators['volume_change']
-                                vol_emoji = "📈" if vol_change > 0 else "📉"
-                                response += f"\n📊 Volume Analysis:\n"
-                                response += f"• 24h Change: {vol_change:+.2f}% {vol_emoji}\n"
-                            
-                            # Support and Resistance
-                            if 'support' in indicators and 'resistance' in indicators:
-                                response += f"\n📍 Key Levels:\n"
-                                response += f"• Support: ${indicators['support']:,.2f}\n"
-                                response += f"• Resistance: ${indicators['resistance']:,.2f}\n"
-                            
-                            # Trading insights
-                            response += f"\n💡 Trading Insights:\n"
-                            response += trend_result['explanation'] + "\n"
-                            
-                            # Risk warning for volatile conditions
-                            if abs(indicators.get('volatility', 0)) > 5:
-                                response += "\n⚠️ High volatility detected - consider:"
-                                response += "\n• Using stop-loss orders"
-                                response += "\n• Trading smaller position sizes"
-                                response += "\n• Implementing a scaled entry strategy"
-                            
-                            # Add disclaimer
-                            response += f"\n\n{disclaimer}"
-                        else:
-                            response = "Sorry, I couldn't calculate the technical indicators. Please try again later."
-                    else:
-                        response = "Sorry, I couldn't fetch the historical data. Please try again later."
-                else:
-                    response = "Which cryptocurrency would you like me to analyze? Try asking about specific coins like BTC, ETH, or SOL."
+        # Interpret the user's query
+        intent = interpret_query(message.lower()) if message else {}
+        
+        # Handle greetings
+        if any(word in message.lower() for word in ['hello', 'hi', 'hey', 'greetings']):
+            response = f"{get_greeting()}\n\nI can help you with:\n"
+            response += "• Portfolio management and suggestions\n"
+            response += "• Price alerts and monitoring\n"
+            response += "• Technical analysis and trends\n"
+            response += "• Cryptocurrency market insights"
             
-            else:
-                # General response with helpful suggestions
-                response = "I can help you with:\n\n"
-                response += "📊 Portfolio Management:\n"
-                response += "• 'Create a conservative portfolio with $5000'\n"
-                response += "• 'Show me an eco-friendly investment strategy'\n\n"
-                response += "🔔 Price Alerts:\n"
-                response += "• 'Alert me when Bitcoin goes above $50,000'\n"
-                response += "• 'Notify me if ETH drops below $2,000'\n\n"
-                response += "📈 Technical Analysis:\n"
-                response += "• 'Analyze Bitcoin's trend'\n"
-                response += "• 'Show me ETH technical indicators'\n\n"
-                response += "💡 General Info:\n"
-                response += "• 'What's trending in crypto?'\n"
-                response += "• 'Tell me about sustainable cryptocurrencies'\n\n"
-                response += "🌐 Market Overview:\n"
-                response += "• 'Show me the current market outlook'\n"
-                response += "• 'How are the top cryptocurrencies performing?'"
+        # Handle trending queries
+        elif any(word in message.lower() for word in ['trending', 'popular', 'hot']):
+            response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
+            
+        # Handle sustainability queries
+        elif any(word in message.lower() for word in ['sustainable', 'eco', 'green']):
+            response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
+            
+        # Handle long-term investment queries
+        elif any(word in message.lower() for word in ['longterm', 'long term', 'long-term']):
+            response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
+            
+        # Handle portfolio queries
+        elif any(word in message.lower() for word in ['portfolio', 'investment', 'invest']):
+            handle_portfolio_chat(message)
+            return
+            
+        # Handle alert queries
+        elif any(word in message.lower() for word in ['alert', 'notify', 'notification']):
+            handle_alerts_chat(message)
+            return
+            
+        # Handle technical analysis queries
+        elif any(word in message.lower() for word in ['analysis', 'trend', 'price', 'technical']):
+            handle_technical_chat(message)
+            return
+            
+        # Default response
+        else:
+            response = get_general_response()
 
-            # Add response to chat history
-            if response:
-                st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+        # Add disclaimer
+        response += f"\n\n{get_disclaimer()}"
+        
+        # Add response to chat history
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
             
     except Exception as e:
-        response = f"I encountered an error while processing your request: {str(e)}"
-        st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+        error_response = f"I encountered an error while processing your request: {str(e)}"
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": error_response})
 
 def display_buddy_chat():
     st.subheader("Chat with CryptoBuddy")
