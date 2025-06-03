@@ -1,14 +1,43 @@
 def get_chat_styling():
     return """
         <style>
+        .user-message-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: start;
+            margin: 10px 0;
+            gap: 10px;
+        }
+        .assistant-message-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: start;
+            margin: 10px 0;
+            gap: 10px;
+        }
         .user-message {
             padding: 10px;
-            margin: 5px 10px 5px auto;
             border-radius: 15px;
             background-color: #e6f3ff;
             max-width: 80%;
-            float: right;
-            clear: both;
+        }
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .user-avatar {
+            background-color: #e6f3ff;
+            color: #2c5282;
+        }
+        .assistant-avatar {
+            background-color: #f0f0f0;
+            color: #4a5568;
         }
         .assistant-message {
             padding: 10px;

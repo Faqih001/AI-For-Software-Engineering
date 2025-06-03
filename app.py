@@ -180,13 +180,23 @@ def display_portfolio_analysis():
     
     # Display chat history in container
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    # Display chat history with alternating styles
+    # Display chat history with avatars
     for message in st.session_state.portfolio_chat_history:
         if isinstance(message, dict) and "role" in message and "content" in message:
             if message["role"] == "user":
-                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="user-message-container">
+                        <div class="user-message">{message["content"]}</div>
+                        <div class="message-avatar user-avatar">👤</div>
+                    </div>
+                ''', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">{message["content"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
@@ -318,9 +328,19 @@ def display_price_alerts():
     for message in st.session_state.alerts_chat_history:
         if isinstance(message, dict) and "role" in message and "content" in message:
             if message["role"] == "user":
-                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="user-message-container">
+                        <div class="user-message">{message["content"]}</div>
+                        <div class="message-avatar user-avatar">👤</div>
+                    </div>
+                ''', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">{message["content"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
@@ -472,9 +492,19 @@ def display_technical_analysis():
     for message in st.session_state.technical_chat_history:
         if isinstance(message, dict) and "role" in message and "content" in message:
             if message["role"] == "user":
-                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="user-message-container">
+                        <div class="user-message">{message["content"]}</div>
+                        <div class="message-avatar user-avatar">👤</div>
+                    </div>
+                ''', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">{message["content"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
@@ -901,9 +931,19 @@ def display_buddy_chat():
     for message in st.session_state.buddy_chat_history:
         if isinstance(message, dict) and "role" in message and "content" in message:
             if message["role"] == "user":
-                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="user-message-container">
+                        <div class="user-message">{message["content"]}</div>
+                        <div class="message-avatar user-avatar">👤</div>
+                    </div>
+                ''', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">{message["content"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
