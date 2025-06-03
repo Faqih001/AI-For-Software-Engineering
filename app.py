@@ -613,55 +613,58 @@ def handle_buddy_chat(message):
         st.session_state.buddy_chat_history.append({"role": "user", "content": message})
         
         # Initialize response
-        response = ""
-        
-        # Interpret the user's query
-        intent = interpret_query(message.lower()) if message else {}
+        response = None
+        message_lower = message.lower() if message else ""
         
         # Handle greetings
-        if any(word in message.lower() for word in ['hello', 'hi', 'hey', 'greetings']):
+        if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
             response = f"{get_greeting()}\n\nI can help you with:\n"
             response += "• Portfolio management and suggestions\n"
             response += "• Price alerts and monitoring\n"
             response += "• Technical analysis and trends\n"
             response += "• Cryptocurrency market insights"
-            
-        # Handle trending queries
-        elif any(word in message.lower() for word in ['trending', 'popular', 'hot']):
-            response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
-            
-        # Handle sustainability queries
-        elif any(word in message.lower() for word in ['sustainable', 'eco', 'green']):
-            response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
-            
-        # Handle long-term investment queries
-        elif any(word in message.lower() for word in ['longterm', 'long term', 'long-term']):
-            response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
-            
+        
         # Handle portfolio queries
-        elif any(word in message.lower() for word in ['portfolio', 'investment', 'invest']):
+        elif any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
             handle_portfolio_chat(message)
             return
             
         # Handle alert queries
-        elif any(word in message.lower() for word in ['alert', 'notify', 'notification']):
+        elif any(word in message_lower for word in ['alert', 'notify', 'notification']):
             handle_alerts_chat(message)
             return
             
         # Handle technical analysis queries
-        elif any(word in message.lower() for word in ['analysis', 'trend', 'price', 'technical']):
+        elif any(word in message_lower for word in ['analysis', 'trend', 'price', 'technical']):
             handle_technical_chat(message)
             return
             
+        # Handle trending queries
+        elif any(word in message_lower for word in ['trending', 'popular', 'hot']):
+            response = f"🔥 Trending Analysis:\n\n{get_trending_response()}"
+            
+        # Handle sustainability queries
+        elif any(word in message_lower for word in ['sustainable', 'eco', 'green']):
+            response = f"🌱 Sustainability Analysis:\n\n{get_sustainable_response()}"
+            
+        # Handle long-term investment queries
+        elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
+            response = f"📈 Long-term Investment Perspective:\n\n{get_longterm_response()}"
+            
         # Default response
         else:
-            response = get_general_response()
+            response = f"{get_general_response()}\n\nI can help you with:\n"
+            response += "• Portfolio suggestions and analysis\n"
+            response += "• Setting up price alerts\n"
+            response += "• Technical analysis and trends\n"
+            response += "• Cryptocurrency market insights"
 
-        # Add disclaimer
-        response += f"\n\n{get_disclaimer()}"
-        
-        # Add response to chat history
-        st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+        if response:
+            # Add disclaimer
+            response += f"\n\n{get_disclaimer()}"
+            
+            # Add response to chat history
+            st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
             
     except Exception as e:
         error_response = f"I encountered an error while processing your request: {str(e)}"
@@ -670,40 +673,65 @@ def handle_buddy_chat(message):
 def display_buddy_chat():
     st.subheader("Chat with CryptoBuddy")
     
-    # Welcome message
-    st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
-    st.write("• 📊 Portfolio suggestions and analysis")
-    st.write("• 🔔 Setting up price alerts")
-    st.write("• 📈 Technical analysis and trends")
-    st.write("• 💡 General cryptocurrency advice")
+    # Welcome message if chat history is empty
+    if not st.session_state.buddy_chat_history:
+        st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
+        st.write("• 📊 Portfolio suggestions and analysis")
+        st.write("• 🔔 Setting up price alerts")
+        st.write("• 📈 Technical analysis and trends")
+        st.write("• 💡 General cryptocurrency advice")
     
     # Add chat styling
     st.markdown(get_chat_styling(), unsafe_allow_html=True)
     
-    # Display chat history in container
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    for message in st.session_state.buddy_chat_history:
-        if isinstance(message, dict) and "role" in message and "content" in message:
-            if message["role"] == "user":
-                st.markdown(f'''
-                    <div class="user-message-container">
-                        <div class="user-message">{message["content"]}</div>
-                        <div class="message-avatar user-avatar">👤</div>
-                    </div>
-                ''', unsafe_allow_html=True)
-            else:
-                st.markdown(f'''
-                    <div class="assistant-message-container">
-                        <div class="message-avatar assistant-avatar">🤖</div>
-                        <div class="assistant-message">{message["content"]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
+    # Display chat history in container with auto-scroll
+    chat_container = st.container()
+    with chat_container:
+        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+        for message in st.session_state.buddy_chat_history:
+            if isinstance(message, dict) and "role" in message and "content" in message:
+                if message["role"] == "user":
+                    st.markdown(f'''
+                        <div class="user-message-container">
+                            <div class="user-message">{message["content"]}</div>
+                            <div class="message-avatar user-avatar">👤</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'''
+                        <div class="assistant-message-container">
+                            <div class="message-avatar assistant-avatar">🤖</div>
+                            <div class="assistant-message">{message["content"]}</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
-    st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
+    # Chat input with thinking animation
+    if "thinking" not in st.session_state:
+        st.session_state.thinking = False
     
-    # Chat input
-    if message := st.chat_input("Ask me anything about crypto..."):
+    if message := st.chat_input("Ask me anything about crypto...", key="buddy_chat_input"):
+        # Show thinking animation
+        thinking_placeholder = st.empty()
+        st.session_state.thinking = True
+        with thinking_placeholder:
+            st.markdown(f'''
+                <div class="assistant-message-container">
+                    <div class="message-avatar assistant-avatar">🤖</div>
+                    <div class="assistant-message">Thinking...</div>
+                </div>
+            ''', unsafe_allow_html=True)
+            
+        # Process message
         handle_buddy_chat(message)
+        
+        # Remove thinking animation
+        thinking_placeholder.empty()
+        st.session_state.thinking = False
+        
+        # Rerun to update chat immediately
+        st.experimental_rerun()
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")

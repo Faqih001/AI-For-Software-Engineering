@@ -54,11 +54,35 @@ def get_chat_styling():
             gap: 10px;
             margin-bottom: 20px;
             min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .chat-container::after {
             content: "";
             clear: both;
             display: table;
+        }
+        
+        /* Thinking animation */
+        .thinking-dots::after {
+            content: '';
+            animation: thinking 1.5s infinite;
+        }
+        @keyframes thinking {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+        .thinking-message {
+            display: flex;
+            align-items: center;
+            color: #666;
         }
         </style>
     """
