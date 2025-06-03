@@ -4,11 +4,20 @@
 
 import sys
 import time
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import wordnet
-from nltk.tag import pos_tag
-from pycoingecko import CoinGeckoAPI
+import traceback
+
+# Try importing required modules with better error handling
+try:
+    import nltk
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import wordnet
+    from nltk.tag import pos_tag
+    from pycoingecko import CoinGeckoAPI
+except ImportError as e:
+    print(f"Import Error: {e}")
+    print("Make sure you've installed the required packages using:")
+    print("pip install nltk pycoingecko")
+    sys.exit(1)
 
 def setup_dependencies():
     """Install and download required dependencies."""
