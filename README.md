@@ -11,6 +11,11 @@ CryptoBuddy is an intelligent cryptocurrency advisory chatbot that leverages Nat
 - **🌱 Sustainability Focus**: Includes environmental impact considerations for crypto recommendations
 - **💬 Interactive Interface**: Engaging, varied responses with randomized greetings and disclaimers
 - **📝 Multiple Query Types**: Handles different intents like trending, sustainable, and long-term investment queries
+- **🔍 Advanced Technical Analysis**: Provides sophisticated market indicators including RSI, MACD and Bollinger Bands
+- **🔔 Price Alerts**: Set and manage custom price alerts for your favorite cryptocurrencies
+- **👤 Personalized Profiles**: Save your preferences and get tailored cryptocurrency recommendations
+- **💼 Portfolio Management**: Get investment allocation suggestions based on various risk profiles
+- **⌨️ Command Interface**: Specialized slash commands for quick access to advanced features
 
 ## 🛠️ Technical Components
 
@@ -79,6 +84,8 @@ git clone <https://github.com/Faqih001/AI-For-Software-Engineering.git>
 
 ## 💡 Usage Examples
 
+### Natural Language Queries
+
 Ask CryptoBuddy questions like:
 
 - "What cryptocurrency is trending right now?"
@@ -86,73 +93,159 @@ Ask CryptoBuddy questions like:
 - "What's a good long-term investment in crypto?"
 - "What do you recommend for a balanced investment?"
 
+### Command Interface
+
+Use slash commands for specialized functions:
+
+- `/help` - Display all available commands
+- `/profile` - Check and update your user preferences
+- `/alerts` - Manage your price alert notifications
+- `/portfolio` - Get personalized investment suggestions
+- `/analyze bitcoin` - View technical analysis for Bitcoin
+
+### Advanced Features
+
+Try these enhanced capabilities:
+
+- "Set an alert for Ethereum when it drops below $2000"
+- "Show me a technical analysis of Cardano"
+- "Suggest an aggressive portfolio for $5000"
+- "What are the key indicators for Solana?"
+
 ## 🧩 How It Works
 
 1. **Query Interpretation**:
-   - The chatbot tokenizes and analyzes your question
+   - The chatbot tokenizes and analyzes your question using NLTK
    - It identifies keywords related to trends, sustainability, or long-term investment
    - It expands keyword recognition through WordNet synonyms
+   - It recognizes command patterns with regex for specialized functions
 
 2. **Data Retrieval**:
-   - Fetches real-time data from CoinGecko API
-   - Augments with sustainability ratings (currently simulated data)
+   - Fetches real-time data from CoinGecko API for 11 cryptocurrencies
+   - Retrieves historical price data for technical analysis
+   - Loads user profiles and preferences for personalized responses
+   - Monitors price movements for user-defined alerts
 
-3. **Recommendation Algorithm**:
-   - Trending intent: Prioritizes coins with rising trends and high market caps
-   - Sustainability intent: Ranks coins by environmental impact scores
-   - Long-term intent: Balances growth trends and sustainability
-   - General intent: Creates balanced recommendations across all factors
+3. **Technical Analysis**:
+   - Calculates RSI (Relative Strength Index) to identify overbought/oversold conditions
+   - Generates MACD (Moving Average Convergence Divergence) signals
+   - Creates Bollinger Bands to identify price volatility and potential reversals
+   - Computes momentum indicators across multiple timeframes
+   - Produces confidence-scored trend signals integrating multiple indicators
 
-4. **Response Generation**:
+4. **Portfolio Management**:
+   - Matches user risk tolerance to appropriate portfolio templates
+   - Allocates investment amounts across multiple cryptocurrencies
+   - Calculates expected coin quantities based on current prices
+   - Analyzes historical performance of portfolios
+   - Identifies top and bottom performers in a portfolio
+
+5. **User Profile System**:
+   - Stores and retrieves personalized user preferences
+   - Tracks favorite cryptocurrencies, risk tolerance, and investment horizon
+   - Manages price alerts linked to user profiles
+   - Creates backups of profile data for data safety
+   - Provides version tracking for backward compatibility
+
+6. **Response Generation**:
    - Selects a random greeting and disclaimer
    - Chooses an appropriate response template based on intent
-   - Populates the template with relevant cryptocurrency data
-   - Returns a friendly, informative response
+   - Incorporates technical analysis data when relevant
+   - Personalizes responses based on user profile
+   - Returns a friendly, informative response or formatted data visualization
 
 ## 📋 Current Cryptocurrency Coverage
 
-CryptoBuddy currently provides information on:
+CryptoBuddy provides information on a wide range of cryptocurrencies:
 
 - **Bitcoin (BTC)**: The original cryptocurrency
 - **Ethereum (ETH)**: The leading smart contract platform
 - **Cardano (ADA)**: A proof-of-stake blockchain platform
+- **Solana (SOL)**: High-performance blockchain
+- **Polkadot (DOT)**: Multi-chain interoperability protocol
+- **Ripple (XRP)**: Digital payment protocol
+- **Dogecoin (DOGE)**: Popular meme cryptocurrency
+- **Avalanche (AVAX)**: Platform for decentralized applications
+- **Chainlink (LINK)**: Decentralized oracle network
+- **Polygon (MATIC)**: Ethereum scaling platform
+- **NEAR Protocol (NEAR)**: Layer 1 blockchain
 
-## ⚠️ Limitations
+## ✅ Advanced Features
 
-- **Limited Cryptocurrency Coverage**: Currently only analyzes Bitcoin, Ethereum, and Cardano
-- **Mocked Sustainability Data**: Environmental impact scores are simulated, not real-world data
-- **API Rate Limits**: CoinGecko's free API has usage restrictions (30 calls/minute)
-- **Simplified Market Analysis**: Does not incorporate complex technical indicators
+### 📊 Technical Analysis
 
-## 🔮 Future Enhancements
+- **Comprehensive Indicators**: RSI, MACD, Bollinger Bands, moving averages
+- **Signal Generation**: Trend signals with confidence scores
+- **Momentum Analysis**: 1-day, 7-day, 14-day, and 30-day price momentum tracking
+- **Market Position**: Identification of overbought/oversold conditions
 
-- **Expanded Cryptocurrency Coverage**: Add support for more cryptocurrencies
-- **Real Sustainability Data**: Integrate actual environmental impact metrics
-- **Technical Analysis**: Incorporate more sophisticated market indicators
-- **User Profiles**: Save user preferences for personalized recommendations
-- **Portfolio Suggestions**: Recommend balanced cryptocurrency portfolios
-- **Price Alerts**: Notify users of significant price movements
-- **Historical Performance**: Add historical performance data and trends
+### 🔔 Price Alerts
+
+- **Custom Alert Thresholds**: Set alerts for when price rises above or falls below specific values
+- **Alert Management**: Add, remove, and monitor multiple price alerts
+- **Persistent Alerts**: Alerts are saved between sessions
+- **Real-time Notifications**: Get notified when your alert conditions are met
+
+### 💼 Portfolio Management
+
+- **Risk-based Portfolio Templates**: Conservative, balanced, aggressive, eco-friendly, and high-cap templates
+- **Personalized Suggestions**: Recommendations based on user profile preferences
+- **Investment Allocation**: Detailed breakdown of investment allocations with exact coin amounts
+- **Historical Performance**: Track portfolio performance over time
+- **Performance Metrics**: See top and bottom performers in your portfolio
+
+### 👤 User Profiles
+
+- **Preference Storage**: Save and load user preferences between sessions
+- **Customizable Risk Parameters**: Set risk tolerance, sustainability preference, and investment horizon
+- **Favorite Coins**: Track your favorite cryptocurrencies
+- **Profile Versioning**: Automatic profile upgrades with backward compatibility
+- **Profile Backups**: Automatic backup creation for data safety
+
+### 💬 Enhanced Command Interface
+
+- **/help**: Display available commands
+- **/profile**: View and update user profile settings
+- **/alerts**: Manage your price alerts
+- **/portfolio**: Get personalized portfolio suggestions
+- **/analyze <coin>**: Generate technical analysis for specific cryptocurrency
+- **/exit**: Save your profile and exit the chatbot
 
 ## 🧪 Technical Details
 
 ### File Structure
 
 - **crypto_buddy.py**: Main application file containing all functionality
+- **profiles/**: Directory storing user profile data in JSON format
+- **alerts/**: Directory storing price alert configurations in JSON format
+
+### Class Structure
+
+- **PriceAlert**: Manages individual cryptocurrency price alerts
+- **AlertManager**: Orchestrates multiple price alerts and monitoring
+- **UserProfile**: Handles user preferences and profile management
+- **PortfolioManager**: Creates and evaluates cryptocurrency portfolio suggestions
 
 ### Dependencies
 
 - **pycoingecko**: Python wrapper for CoinGecko API
 - **nltk**: Natural Language Toolkit for query interpretation
+- **json**: Used for profile and alert data serialization
+- **datetime**: Timestamp handling for alerts and historical data
+- **threading**: Background monitoring of price alerts
+- **re**: Regular expression pattern matching for command processing
 - **random**: Used for response randomization
 - **sys**: System-specific parameters and functions
 - **time**: Time-related functions for API rate limiting
+- **os**: File and directory management
 
 ### Error Handling
 
 - Robust error handling for API connectivity issues
 - Graceful fallback for NLTK data availability problems
 - SSL certificate verification workarounds
+- Profile data backup and recovery mechanism
+- Exception handling for price monitoring and data retrieval
 
 ## 📝 License
 
