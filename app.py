@@ -666,31 +666,21 @@ def display_buddy_chat():
     with chat_container:
         st.markdown('<div class="chat-container">', unsafe_allow_html=True)
         
-        for i, message in enumerate(st.session_state.buddy_chat_history):
+        for message in st.session_state.buddy_chat_history:
             if isinstance(message, dict) and "role" in message and "content" in message:
-                key = f"message_{i}_{st.session_state.chat_key}"
-                
                 if message["role"] == "user":
                     st.markdown(f'''
-                        <div class="user-message-container" id="{key}">
+                        <div class="user-message-container">
                             <div class="user-message">{message["content"]}</div>
                             <div class="message-avatar user-avatar">👤</div>
                         </div>
                     ''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''
-                        <div class="assistant-message-container" id="{key}">
+                        <div class="assistant-message-container">
                             <div class="message-avatar assistant-avatar">🤖</div>
                             <div class="assistant-message">{message["content"]}</div>
                         </div>
-                    ''', unsafe_allow_html=True)
-                    
-                # Auto-scroll to latest message
-                if i == len(st.session_state.buddy_chat_history) - 1:
-                    st.markdown(f'''
-                        <script>
-                            document.getElementById("{key}").scrollIntoView({{behavior: "smooth"}});
-                        </script>
                     ''', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
@@ -698,34 +688,16 @@ def display_buddy_chat():
     # Chat input with thinking animation
     with input_container:
         if message := st.chat_input("Ask me anything about crypto...", key=f"chat_input_{st.session_state.chat_key}"):
-            # Hide welcome message once user starts chatting
+            # Hide welcome message when user starts chatting
             st.session_state.show_welcome = False
             
-            # Show thinking animation
-            thinking_placeholder = st.empty()
-            st.session_state.thinking = True
-            
-            with thinking_placeholder:
-                st.markdown('''
-                    <div class="assistant-message-container">
-                        <div class="message-avatar assistant-avatar">🤖</div>
-                        <div class="assistant-message">
-                            <div class="thinking-dots">Thinking...</div>
-                        </div>
-                    </div>
-                ''', unsafe_allow_html=True)
-            
             # Process message
+            st.session_state.thinking = True
             handle_buddy_chat(message)
-            
-            # Update chat key to force re-render and ensure correct scrolling
-            st.session_state.chat_key += 1
-            
-            # Remove thinking animation and reset state
-            thinking_placeholder.empty()
             st.session_state.thinking = False
             
-            # Rerun to update chat immediately
+            # Increment chat key to force input refresh
+            st.session_state.chat_key += 1
             st.rerun()
 
 def main():
