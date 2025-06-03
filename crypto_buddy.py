@@ -5,6 +5,7 @@
 import sys
 import time
 import traceback
+import random
 
 # Try importing required modules with better error handling
 try:
@@ -136,6 +137,38 @@ def get_synonyms(word):
         pass
     return synonyms
 
+def get_greeting():
+    """Return a random greeting template."""
+    greetings = [
+        "Hey there! I'm CryptoBuddy, your crypto sidekick! 🌟\n",
+        "Hello crypto explorer! CryptoBuddy at your service! 💰\n",
+        "Greetings, future crypto mogul! CryptoBuddy here to help! 🚀\n",
+        "Welcome to the crypto universe! I'm CryptoBuddy, your guide! ✨\n",
+        "Hi there! CryptoBuddy reporting for duty! 📊\n",
+        "Yo! CryptoBuddy in the house! Ready to talk crypto! 🤑\n",
+        "Howdy partner! CryptoBuddy here for all your crypto questions! 🤠\n",
+        "Salutations, crypto enthusiast! CryptoBuddy at your disposal! 🧠\n",
+        "G'day mate! CryptoBuddy ready to dive into the crypto world! 🏄\n",
+        "What's up? CryptoBuddy here to demystify crypto for you! 🔍\n"
+    ]
+    return random.choice(greetings)
+
+def get_disclaimer():
+    """Return a random disclaimer template."""
+    disclaimers = [
+        "⚠️ Crypto is risky—always do your own research!\n",
+        "⚠️ Remember: all crypto investments come with risks. Never invest what you can't afford to lose!\n",
+        "⚠️ Disclaimer: This is not financial advice. Always research before investing!\n",
+        "⚠️ The crypto market is volatile—proceed with caution and your own due diligence!\n",
+        "⚠️ Warning: Cryptocurrency values can dramatically fluctuate. Invest wisely!\n",
+        "⚠️ Note: I'm just a friendly AI, not a financial advisor. Make informed decisions!\n",
+        "⚠️ Friendly reminder: The crypto space is high-risk! Do thorough research!\n",
+        "⚠️ Important: Crypto investments can result in substantial gains or losses. Be careful!\n",
+        "⚠️ PSA: Always verify information and consult professionals before crypto investments!\n",
+        "⚠️ Caution: The crypto market never sleeps and can be unpredictable. Stay informed!\n"
+    ]
+    return random.choice(disclaimers)
+
 def interpret_query(user_query):
     """Interpret user query intent using NLP."""
     # Check if NLTK resources are available
@@ -151,11 +184,30 @@ def interpret_query(user_query):
         tagged = [(token, 'UNKNOWN') for token in tokens]
         print("Notice: Using simplified query analysis (NLTK data unavailable)")
     
-    # Define keywords and their synonyms
-    trend_keywords = {'trend', 'trending', 'rise', 'rising', 'up', 'growth', 'profitable', 'profit'}
-    sustain_keywords = {'sustainable', 'sustainability', 'eco', 'ecofriendly', 'green', 'environment'}
-    longterm_keywords = {'longterm', 'long', 'future', 'growth', 'potential'}
-    general_keywords = {'which', 'what', 'recommend', 'suggest', 'best', 'good'}
+    # Define expanded keywords and their synonyms for better intent recognition
+    trend_keywords = {
+        'trend', 'trending', 'rise', 'rising', 'up', 'growth', 'profitable', 'profit',
+        'hot', 'booming', 'surging', 'bullish', 'mooning', 'pumping', 'momentum', 'gains',
+        'climbing', 'increasing', 'appreciating', 'growing', 'popular', 'hype', 'buzz'
+    }
+    
+    sustain_keywords = {
+        'sustainable', 'sustainability', 'eco', 'ecofriendly', 'green', 'environment',
+        'clean', 'renewable', 'carbon', 'footprint', 'climate', 'earth', 'planet',
+        'ecological', 'responsible', 'ethical', 'energy', 'efficient', 'conscious'
+    }
+    
+    longterm_keywords = {
+        'longterm', 'long', 'future', 'growth', 'potential', 'investment', 'hold',
+        'hodl', 'stable', 'stability', 'lasting', 'enduring', 'portfolio', 'retirement',
+        'years', 'decade', 'permanent', 'horizon', 'prospect', 'tomorrow'
+    }
+    
+    general_keywords = {
+        'which', 'what', 'recommend', 'suggest', 'best', 'good', 'better',
+        'advice', 'help', 'guide', 'opinion', 'think', 'consider', 'thoughts',
+        'view', 'guidance', 'suggestion', 'recommendation', 'insight', 'preference'
+    }
     
     # Expand keywords with synonyms if NLTK is available
     trend_synonyms = set(trend_keywords)
@@ -199,10 +251,11 @@ def crypto_buddy_response(user_query):
     intent = interpret_query(user_query)
     
     # Friendly greeting and ethics disclaimer
-    greeting = "Hey there! I'm CryptoBuddy, your crypto sidekick! 🌟\n⚠️ Crypto is risky—always do your own research!\n"
+    greeting = get_greeting()
+    disclaimer = get_disclaimer()
     
     # Initialize response
-    response = greeting
+    response = greeting + disclaimer
     
     # Logic for handling user intents
     if intent == 'trending':
