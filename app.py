@@ -365,7 +365,7 @@ def display_price_alerts():
                     if not alert.triggered and st.button(f"Delete Alert {i+1}"):
                         st.session_state.alert_manager.remove_alert(i)
                         st.session_state.alert_manager.save_alerts()
-                        st.experimental_rerun()
+                        st.rerun()
         else:
             st.info("No active alerts. Create one below!")
         
@@ -393,7 +393,7 @@ def display_price_alerts():
                 st.session_state.alert_manager.add_alert(alert)
                 st.session_state.alert_manager.save_alerts()
                 st.success("Alert created successfully!")
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.warning("Please log in to manage price alerts.")
 
@@ -844,7 +844,7 @@ def main():
             st.write(f"Investment Horizon: {st.session_state.user_profile.investment_horizon}")
             if st.button("Logout"):
                 st.session_state.user_profile = None
-                st.experimental_rerun()
+                st.rerun()
         else:
             tab1, tab2 = st.tabs(["Login", "Create Profile"])
             with tab1:
