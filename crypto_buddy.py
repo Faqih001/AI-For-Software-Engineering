@@ -91,8 +91,12 @@ def fetch_crypto_data():
     # Initialize CoinGecko API client
     cg = CoinGeckoAPI()
     
-    # Fetch real-time data for Bitcoin, Ethereum, and Cardano
-    coins = ['bitcoin', 'ethereum', 'cardano']
+    # Fetch real-time data for an expanded list of cryptocurrencies
+    coins = [
+        'bitcoin', 'ethereum', 'cardano',  # Original coins
+        'solana', 'polkadot', 'ripple', 'dogecoin', 'avalanche-2',  # Additional major coins
+        'chainlink', 'polygon', 'near'  # More options
+    ]
     try:
         data = cg.get_price(
             ids=coins,
@@ -101,11 +105,20 @@ def fetch_crypto_data():
             include_24hr_change=True
         )
         
-        # Mock sustainability data (since CoinGecko doesn't provide this)
+        # Enhanced sustainability data with research-based estimates
+        # Note: These are still simulated but more comprehensive
         sustainability_data = {
-            'bitcoin': {'energy_use': 'high', 'sustainability_score': 3/10},
-            'ethereum': {'energy_use': 'medium', 'sustainability_score': 6/10},
-            'cardano': {'energy_use': 'low', 'sustainability_score': 8/10}
+            'bitcoin': {'energy_use': 'high', 'sustainability_score': 3/10, 'consensus': 'proof-of-work'},
+            'ethereum': {'energy_use': 'medium', 'sustainability_score': 6/10, 'consensus': 'proof-of-stake'},
+            'cardano': {'energy_use': 'low', 'sustainability_score': 8/10, 'consensus': 'proof-of-stake'},
+            'solana': {'energy_use': 'low', 'sustainability_score': 7.5/10, 'consensus': 'proof-of-stake'},
+            'polkadot': {'energy_use': 'low', 'sustainability_score': 7.2/10, 'consensus': 'nominated proof-of-stake'},
+            'ripple': {'energy_use': 'very low', 'sustainability_score': 8.2/10, 'consensus': 'federated consensus'},
+            'dogecoin': {'energy_use': 'high', 'sustainability_score': 3.5/10, 'consensus': 'proof-of-work'},
+            'avalanche-2': {'energy_use': 'low', 'sustainability_score': 7.8/10, 'consensus': 'proof-of-stake'},
+            'chainlink': {'energy_use': 'medium', 'sustainability_score': 6.5/10, 'consensus': 'hybrid'},
+            'polygon': {'energy_use': 'low', 'sustainability_score': 7.3/10, 'consensus': 'proof-of-stake'},
+            'near': {'energy_use': 'low', 'sustainability_score': 7.9/10, 'consensus': 'proof-of-stake'}
         }
         
         # Construct crypto database
@@ -125,6 +138,157 @@ def fetch_crypto_data():
         print(f"Error fetching data from CoinGecko: {e}")
         return None
 
+def fetch_historical_data(coin_id, days=30):
+    """Fetch historical price data for a cryptocurrency.
+    
+    Args:
+        coin_id (str): The CoinGecko ID of the cryptocurrency
+        days (int): Number of days of historical data to retrieve
+        
+    Returns:
+        dict: Historical data including prices, market caps, and volumes
+    """
+    try:
+        cg = CoinGeckoAPI()
+        historical_data = cg.get_coin_market_chart_by_id(
+            id=coin_id,
+            vs_currency='usd',
+            days=days
+        )
+        return historical_data
+    except Exception as e:
+        print(f"Error fetching historical data: {e}")
+        return None
+
+def calculate_technical_indicators(historical_data):
+    """Calculate technical indicators from historical price data.
+    
+    Args:
+        historical_data (dict): Historical price data from CoinGecko
+        
+    Returns:
+        dict: Calculated technical indicators
+    """
+    if not historical_data or 'prices' not in historical_data:
+        return None
+    
+    # Extract price data
+    prices = [price[1] for price in historical_data['prices']]
+    
+    # Calculate simple moving averages
+    sma_7 = sum(prices[-7:]) / 7 if len(prices) >= 7 else None
+    sma_30 = sum(prices[-30:]) / 30 if len(prices) >= 30 else None
+    
+    # Calculate Relative Strength Index (RSI) - simplified version
+    gains = []
+    losses = []
+    for i in range(1, len(prices)):
+        change = prices[i] - prices[i-1]
+        if change >= 0:
+            gains.append(change)
+            losses.append(0)
+        else:
+            gains.append(0)
+            losses.append(abs(change))
+    
+    # Use last 14 periods for RSI if available
+    rsi_period = 14
+    if len(gains) >= rsi_period:
+        avg_gain = sum(gains[-rsi_period:]) / rsi_period
+        avg_loss = sum(losses[-rsi_period:]) / rsi_period
+        
+        if avg_loss == 0:
+            rsi = 100
+        else:
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+    else:
+        rsi = None
+    
+    # Calculate price volatility (standard deviation)
+    if len(prices) > 1:
+        mean_price = sum(prices) / len(prices)
+        squared_diffs = [(price - mean_price) ** 2 for price in prices]
+        variance = sum(squared_diffs) / len(prices)
+        volatility = variance ** 0.5
+        volatility_percent = (volatility / mean_price) * 100
+    else:
+        volatility_percent = None
+    
+    # Calculate MACD (Moving Average Convergence Divergence) - simplified
+    if len(prices) >= 26:
+        ema_12 = sum(prices[-12:]) / 12  # Using SMA as approximation
+        ema_26 = sum(prices[-26:]) / 26  # Using SMA as approximation
+        macd = ema_12 - ema_26
+    else:
+        macd = None
+    
+    # Price momentum (percentage change)
+    if len(prices) >= 7:
+        momentum_7d = ((prices[-1] / prices[-7]) - 1) * 100
+    else:
+        momentum_7d = None
+    
+    return {
+        'current_price': prices[-1] if prices else None,
+        'sma_7': sma_7,
+        'sma_30': sma_30,
+        'rsi': rsi,
+        'volatility': volatility_percent,
+        'macd': macd,
+        'momentum_7d': momentum_7d,
+        'trend_signal': get_trend_signal(sma_7, sma_30, rsi, macd) if all(x is not None for x in [sma_7, sma_30, rsi, macd]) else 'neutral'
+    }
+
+def get_trend_signal(sma_7, sma_30, rsi, macd):
+    """Determine trend signal based on technical indicators.
+    
+    Args:
+        sma_7 (float): 7-day simple moving average
+        sma_30 (float): 30-day simple moving average
+        rsi (float): Relative Strength Index
+        macd (float): Moving Average Convergence Divergence
+        
+    Returns:
+        str: 'bullish', 'bearish', or 'neutral'
+    """
+    signals = []
+    
+    # SMA signal
+    if sma_7 > sma_30:
+        signals.append('bullish')
+    elif sma_7 < sma_30:
+        signals.append('bearish')
+    else:
+        signals.append('neutral')
+    
+    # RSI signal
+    if rsi < 30:
+        signals.append('bullish')  # Oversold
+    elif rsi > 70:
+        signals.append('bearish')  # Overbought
+    else:
+        signals.append('neutral')
+    
+    # MACD signal
+    if macd > 0:
+        signals.append('bullish')
+    elif macd < 0:
+        signals.append('bearish')
+    else:
+        signals.append('neutral')
+    
+    # Count signals
+    bullish_count = signals.count('bullish')
+    bearish_count = signals.count('bearish')
+    
+    if bullish_count > bearish_count:
+        return 'bullish'
+    elif bearish_count > bullish_count:
+        return 'bearish'
+    else:
+        return 'neutral'
+    
 def get_synonyms(word):
     """Get synonyms for a word using WordNet."""
     synonyms = set()
@@ -356,6 +520,176 @@ def get_general_response(coin_name, trend, score):
     ]
     return random.choice(responses)
 
+class UserProfile:
+    """A class to store and manage user cryptocurrency preferences."""
+    
+    def __init__(self, username='default'):
+        """Initialize a user profile.
+        
+        Args:
+            username (str): The name of the user profile
+        """
+        self.username = username
+        self.favorite_coins = []
+        self.risk_tolerance = 'medium'  # 'low', 'medium', 'high'
+        self.sustainability_preference = 'medium'  # 'low', 'medium', 'high'
+        self.investment_horizon = 'medium'  # 'short', 'medium', 'long'
+        
+    def add_favorite_coin(self, coin):
+        """Add a cryptocurrency to favorites.
+        
+        Args:
+            coin (str): The name/id of the cryptocurrency
+        """
+        if coin not in self.favorite_coins:
+            self.favorite_coins.append(coin)
+            
+    def remove_favorite_coin(self, coin):
+        """Remove a cryptocurrency from favorites.
+        
+        Args:
+            coin (str): The name/id of the cryptocurrency
+        """
+        if coin in self.favorite_coins:
+            self.favorite_coins.remove(coin)
+            
+    def set_risk_tolerance(self, level):
+        """Set the user's risk tolerance level.
+        
+        Args:
+            level (str): 'low', 'medium', or 'high'
+        """
+        if level in ['low', 'medium', 'high']:
+            self.risk_tolerance = level
+            
+    def set_sustainability_preference(self, level):
+        """Set the user's preference for sustainable cryptocurrencies.
+        
+        Args:
+            level (str): 'low', 'medium', or 'high'
+        """
+        if level in ['low', 'medium', 'high']:
+            self.sustainability_preference = level
+            
+    def set_investment_horizon(self, horizon):
+        """Set the user's investment time horizon.
+        
+        Args:
+            horizon (str): 'short', 'medium', or 'long'
+        """
+        if horizon in ['short', 'medium', 'long']:
+            self.investment_horizon = horizon
+    
+    def save_profile(self):
+        """Save the user profile to a file."""
+        try:
+            import json
+            import os
+            
+            # Create profiles directory if it doesn't exist
+            os.makedirs('profiles', exist_ok=True)
+            
+            # Save profile as JSON
+            profile_data = {
+                'username': self.username,
+                'favorite_coins': self.favorite_coins,
+                'risk_tolerance': self.risk_tolerance,
+                'sustainability_preference': self.sustainability_preference,
+                'investment_horizon': self.investment_horizon
+            }
+            
+            with open(f'profiles/{self.username}.json', 'w') as f:
+                json.dump(profile_data, f, indent=2)
+                
+            return True
+        except Exception as e:
+            print(f"Error saving profile: {e}")
+            return False
+    
+    @classmethod
+    def load_profile(cls, username):
+        """Load a user profile from a file.
+        
+        Args:
+            username (str): The name of the profile to load
+            
+        Returns:
+            UserProfile: The loaded user profile or a new default profile
+        """
+        try:
+            import json
+            import os
+            
+            profile_path = f'profiles/{username}.json'
+            
+            if not os.path.exists(profile_path):
+                return cls(username)
+            
+            with open(profile_path, 'r') as f:
+                profile_data = json.load(f)
+            
+            profile = cls(username)
+            profile.favorite_coins = profile_data.get('favorite_coins', [])
+            profile.risk_tolerance = profile_data.get('risk_tolerance', 'medium')
+            profile.sustainability_preference = profile_data.get('sustainability_preference', 'medium')
+            profile.investment_horizon = profile_data.get('investment_horizon', 'medium')
+            
+            return profile
+        except Exception as e:
+            print(f"Error loading profile: {e}")
+            return cls(username)
+    
+    def get_personalized_recommendations(self, crypto_db):
+        """Get personalized cryptocurrency recommendations based on user preferences.
+        
+        Args:
+            crypto_db (dict): Database of cryptocurrency information
+            
+        Returns:
+            list: Sorted list of recommended cryptocurrencies with scores
+        """
+        recommendations = []
+        
+        for coin, data in crypto_db.items():
+            score = 0
+            
+            # Favorite coins get a boost
+            if coin.lower() in [c.lower() for c in self.favorite_coins]:
+                score += 2
+            
+            # Risk tolerance factor (based on volatility, which we don't have yet)
+            if self.risk_tolerance == 'high' and data['market_cap'] == 'low':
+                score += 1
+            elif self.risk_tolerance == 'medium' and data['market_cap'] == 'medium':
+                score += 1
+            elif self.risk_tolerance == 'low' and data['market_cap'] == 'high':
+                score += 1
+                
+            # Sustainability preference
+            if self.sustainability_preference == 'high':
+                if data['sustainability_score'] > 7/10:
+                    score += 2
+                elif data['sustainability_score'] > 5/10:
+                    score += 1
+            elif self.sustainability_preference == 'medium':
+                if data['sustainability_score'] > 5/10:
+                    score += 1
+            
+            # Investment horizon
+            if self.investment_horizon == 'short' and data['price_trend'] == 'rising':
+                score += 1
+            elif self.investment_horizon == 'medium' and data['market_cap'] != 'low':
+                score += 1
+            elif self.investment_horizon == 'long' and data['sustainability_score'] > 6/10:
+                score += 1
+                
+            recommendations.append((coin, score))
+        
+        # Sort by score, highest first
+        recommendations.sort(key=lambda x: x[1], reverse=True)
+        
+        return recommendations
+
 def crypto_buddy_response(user_query):
     """Generate chatbot response based on user query."""
     # Fetch real-time data
@@ -421,6 +755,11 @@ def run_crypto_buddy():
     print("  - Tell me about sustainable cryptocurrencies")
     print("  - What's good for long term investment?")
     print("===============================================\n")
+    
+    # Load user profile
+    username = input("Enter your username: ")
+    user_profile = UserProfile.load_profile(username)
+    print(f"Welcome back, {user_profile.username}! Your preferences have been loaded. 😊")
     
     while True:
         user_input = input("You: ")
