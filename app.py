@@ -68,6 +68,8 @@ if 'alerts_chat_history' not in st.session_state:
     st.session_state.alerts_chat_history = []
 if 'technical_chat_history' not in st.session_state:
     st.session_state.technical_chat_history = []
+if 'buddy_chat_history' not in st.session_state:
+    st.session_state.buddy_chat_history = []
 
 def initialize_nlp():
     try:
@@ -543,6 +545,193 @@ def display_technical_analysis():
                     st.error("Failed to calculate technical indicators.")
             else:
                 st.error("Failed to fetch historical data.")
+
+def handle_buddy_chat(message):
+    # Process the chat message and get a response using all crypto buddy functionalities
+    response = None
+    try:
+        # Add message to chat history
+        st.session_state.buddy_chat_history.append({"role": "user", "content": message})
+        
+        # Interpret the user's query
+        intent = interpret_query(message.lower())
+        
+        if intent:
+            if intent.get('is_greeting', False):
+                response = get_greeting()
+                
+            elif intent.get('wants_trending', False):
+                response = get_trending_response() if 'trending' in intent else get_no_trending_response()
+                
+            elif intent.get('wants_sustainable', False):
+                response = get_sustainable_response() if 'sustainable' in intent else get_less_sustainable_response()
+                
+            elif intent.get('wants_longterm', False):
+                response = get_longterm_response() if 'longterm' in intent else get_no_longterm_response()
+                
+            elif "portfolio" in intent or "investment" in intent:
+                # Portfolio-related query
+                if st.session_state.user_profile:
+                    amount_match = re.search(r'\$?(\d+(?:,\d{3})*(?:\.\d{1,2})?)', message)
+                    investment_amount = 1000  # default
+                    if amount_match:
+                        investment_amount = float(amount_match.group(1).replace(',', ''))
+                    
+                    risk_profile = 'balanced'  # default
+                    if any(word in message.lower() for word in ['conservative', 'safe', 'low risk']):
+                        risk_profile = 'conservative'
+                    elif any(word in message.lower() for word in ['aggressive', 'high risk', 'risky']):
+                        risk_profile = 'aggressive'
+                    elif any(word in message.lower() for word in ['eco', 'sustainable', 'green']):
+                        risk_profile = 'eco_friendly'
+                    
+                    portfolio = st.session_state.portfolio_manager.get_portfolio_suggestion(
+                        risk_profile,
+                        investment_amount
+                    )
+                    
+                    if portfolio:
+                        response = f"I've created a {risk_profile} portfolio for ${investment_amount}:\n\n"
+                        for alloc in portfolio['allocations']:
+                            response += f"• {alloc['coin'].capitalize()}: {alloc['allocation_percentage']:.1f}% (${alloc['fiat_amount']:.2f})\n"
+                        
+                        performance = st.session_state.portfolio_manager.get_portfolio_performance(portfolio)
+                        if performance:
+                            response += f"\n30-day historical performance:\n"
+                            response += f"• Initial: ${performance['initial_investment']:.2f}\n"
+                            response += f"• Current: ${performance['current_value']:.2f}\n"
+                            response += f"• Change: {performance['percent_change']:.2f}%"
+                else:
+                    response = "Please log in or create a profile to get personalized portfolio suggestions."
+                
+            elif "alert" in intent or "notify" in intent:
+                # Price alert query
+                if st.session_state.user_profile:
+                    coins = ["bitcoin", "ethereum", "cardano", "solana", "polkadot", "ripple", "dogecoin", "avalanche", "chainlink", "polygon", "near"]
+                    coin_id = None
+                    for coin in coins:
+                        if coin in message.lower():
+                            coin_id = coin if coin != "avalanche" else "avalanche-2"
+                            break
+                    
+                    price_match = re.search(r'\$?(\d+(?:,\d{3})*(?:\.\d{1,2})?)', message)
+                    if coin_id and price_match:
+                        price = float(price_match.group(1).replace(',', ''))
+                        alert_type = 'above' if any(word in message.lower() for word in ['above', 'over', 'exceeds']) else 'below'
+                        
+                        alert = PriceAlert(
+                            coin_id,
+                            price,
+                            alert_type,
+                            st.session_state.user_profile.username
+                        )
+                        st.session_state.alert_manager.add_alert(alert)
+                        st.session_state.alert_manager.save_alerts()
+                        
+                        response = f"✅ I've set an alert for {coin_id.capitalize()} when it goes {alert_type} ${price:.2f}"
+                    else:
+                        response = "Please specify both a cryptocurrency and a price value. For example: 'Alert me when Bitcoin goes above $50,000'"
+                else:
+                    response = "Please log in or create a profile to set price alerts."
+                
+            elif "analysis" in intent or "trend" in intent or "price" in intent:
+                # Technical analysis query
+                coins = {
+                    "bitcoin": "bitcoin", "btc": "bitcoin",
+                    "ethereum": "ethereum", "eth": "ethereum",
+                    "cardano": "cardano", "ada": "cardano",
+                    "solana": "solana", "sol": "solana",
+                    "polkadot": "polkadot", "dot": "polkadot",
+                    "ripple": "ripple", "xrp": "ripple",
+                    "dogecoin": "dogecoin", "doge": "dogecoin",
+                    "avalanche": "avalanche-2", "avax": "avalanche-2",
+                    "chainlink": "chainlink", "link": "chainlink",
+                    "polygon": "polygon", "matic": "polygon",
+                    "near": "near"
+                }
+                
+                coin_id = None
+                for key, value in coins.items():
+                    if key in message.lower():
+                        coin_id = value
+                        break
+                
+                if coin_id:
+                    days = 30  # default
+                    if "week" in message.lower() or "7" in message:
+                        days = 7
+                    elif "month" in message.lower() or "30" in message:
+                        days = 30
+                    elif "90" in message or "quarter" in message.lower():
+                        days = 90
+                        
+                    historical_data = fetch_historical_data(coin_id, days)
+                    if historical_data:
+                        indicators = calculate_technical_indicators(historical_data)
+                        if indicators:
+                            trend_result = get_trend_signal(
+                                indicators['sma_7'],
+                                indicators['sma_30'],
+                                indicators['rsi'],
+                                indicators['macd'],
+                                indicators
+                            )
+                            
+                            response = f"📊 Here's my analysis of {coin_id.capitalize()} over {days} days:\n\n"
+                            response += f"• Current Price: ${indicators['current_price']:.2f}\n"
+                            response += f"• Signal: {trend_result['signal'].upper()}\n"
+                            response += f"• Confidence: {trend_result['confidence']:.1f}%\n\n"
+                            
+                            if indicators['rsi'] is not None:
+                                rsi_status = "OVERSOLD" if indicators['rsi'] < 30 else "OVERBOUGHT" if indicators['rsi'] > 70 else "NEUTRAL"
+                                response += f"• RSI: {indicators['rsi']:.1f} ({rsi_status})\n"
+                            
+                            if 'momentum' in indicators:
+                                response += f"• 7-Day Momentum: {indicators['momentum']['7d']:.2f}%\n"
+                            
+                            response += f"\n{trend_result['explanation']}"
+                        else:
+                            response = "I couldn't calculate the technical indicators at the moment. Please try again later."
+                    else:
+                        response = "I couldn't fetch the historical data. Please try again later."
+                else:
+                    response = "Please specify which cryptocurrency you'd like me to analyze. For example: 'What's the trend for Bitcoin?' or 'Analyze ETH'"
+            
+            else:
+                response = get_general_response()
+                
+            if not response:
+                response = "I'm not sure how to help with that. You can ask me about:\n" + \
+                          "• Portfolio suggestions (e.g., 'Create a conservative portfolio with $5000')\n" + \
+                          "• Price alerts (e.g., 'Alert me when Bitcoin goes above $50,000')\n" + \
+                          "• Technical analysis (e.g., 'What's the trend for Ethereum?')\n" + \
+                          "• General crypto advice and trends"
+        
+        # Add response to chat history
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+            
+    except Exception as e:
+        response = f"I encountered an error while processing your request: {str(e)}"
+        st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
+
+def display_buddy_chat():
+    st.subheader("Chat with CryptoBuddy")
+    
+    # Welcome message
+    st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
+    st.write("• 📊 Portfolio suggestions and analysis")
+    st.write("• 🔔 Setting up price alerts")
+    st.write("• 📈 Technical analysis and trends")
+    st.write("• 💡 General cryptocurrency advice")
+    
+    # Display chat history
+    for message in st.session_state.buddy_chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    
+    # Chat input
+    if message := st.chat_input("Ask me anything about crypto..."):
+        handle_buddy_chat(message)
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")
