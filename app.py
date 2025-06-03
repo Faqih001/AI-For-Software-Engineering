@@ -1,4 +1,5 @@
 import streamlit as st
+from chat_styles import get_chat_styling
 import pandas as pd
 import time
 import numpy as np
@@ -174,38 +175,20 @@ def display_portfolio_analysis():
     # Chat interface
     st.write("💬 Chat with me about portfolio strategies!")
     
-    # Add custom CSS for chat styling
-    st.markdown("""
-        <style>
-        .user-message {
-            padding: 10px;
-            margin: 5px;
-            border-radius: 15px;
-            background-color: #e6f3ff;
-            max-width: 80%;
-            margin-left: auto;
-            margin-right: 10px;
-            text-align: right;
-        }
-        .assistant-message {
-            padding: 10px;
-            margin: 5px;
-            border-radius: 15px;
-            background-color: #f0f0f0;
-            max-width: 80%;
-            margin-right: auto;
-            margin-left: 10px;
-            text-align: left;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # Add chat styling
+    st.markdown(get_chat_styling(), unsafe_allow_html=True)
     
+    # Display chat history in container
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     # Display chat history with alternating styles
     for message in st.session_state.portfolio_chat_history:
-        if message["role"] == "user":
-            st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+        if isinstance(message, dict) and "role" in message and "content" in message:
+            if message["role"] == "user":
+                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input
     if message := st.chat_input("Ask about portfolio strategies..."):
@@ -327,10 +310,19 @@ def display_price_alerts():
     # Chat interface
     st.write("💬 Chat with me to set up price alerts!")
     
-    # Display chat history
+    # Add chat styling
+    st.markdown(get_chat_styling(), unsafe_allow_html=True)
+    
+    # Display chat history in container
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for message in st.session_state.alerts_chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+        if isinstance(message, dict) and "role" in message and "content" in message:
+            if message["role"] == "user":
+                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input
     if message := st.chat_input("Ask about setting price alerts..."):
@@ -472,10 +464,19 @@ def display_technical_analysis():
     # Chat interface
     st.write("💬 Chat with me about technical analysis!")
     
-    # Display chat history
+    # Add chat styling
+    st.markdown(get_chat_styling(), unsafe_allow_html=True)
+    
+    # Display chat history in container
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for message in st.session_state.technical_chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+        if isinstance(message, dict) and "role" in message and "content" in message:
+            if message["role"] == "user":
+                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input
     if message := st.chat_input("Ask about technical analysis..."):
@@ -892,10 +893,19 @@ def display_buddy_chat():
     st.write("• 📈 Technical analysis and trends")
     st.write("• 💡 General cryptocurrency advice")
     
-    # Display chat history
+    # Add chat styling
+    st.markdown(get_chat_styling(), unsafe_allow_html=True)
+    
+    # Display chat history in container
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for message in st.session_state.buddy_chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+        if isinstance(message, dict) and "role" in message and "content" in message:
+            if message["role"] == "user":
+                st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="assistant-message">{message["content"]}</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input
     if message := st.chat_input("Ask me anything about crypto..."):
