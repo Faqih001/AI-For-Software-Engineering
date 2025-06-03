@@ -31,14 +31,35 @@ def setup_dependencies():
             print("Installing required packages...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pycoingecko", "nltk"])
             
-        # Download required NLTK data
+        # Download required NLTK data with SSL workaround
         print("Downloading NLTK data...")
-        nltk.download('punkt', quiet=True)
-        nltk.download('averaged_perceptron_tagger', quiet=True)
-        nltk.download('wordnet', quiet=True)
+        try:
+            # First attempt - normal download
+            nltk.download('punkt', quiet=True)
+            nltk.download('averaged_perceptron_tagger', quiet=True)
+            nltk.download('wordnet', quiet=True)
+        except Exception as ssl_error:
+            print("SSL verification issue detected. Trying alternative download method...")
+            import ssl
+            import nltk.downloader
+            
+            # Create an unverified SSL context
+            try:
+                _create_unverified_https_context = ssl._create_unverified_context
+            except AttributeError:
+                pass
+            else:
+                ssl._create_default_https_context = _create_unverified_https_context
+            
+            # Try the download again with the modified SSL context
+            nltk.download('punkt', quiet=True)
+            nltk.download('averaged_perceptron_tagger', quiet=True)
+            nltk.download('wordnet', quiet=True)
+            
         print("Setup complete!")
     except Exception as e:
         print(f"Setup failed: {e}")
+        print(f"Error details: {traceback.format_exc()}")
         sys.exit(1)
 
 def fetch_crypto_data():
