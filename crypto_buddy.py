@@ -31,17 +31,22 @@ def setup_dependencies():
             print("Installing required packages...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pycoingecko", "nltk"])
             
+        # Set up the NLTK data path to use a local directory
+        import os
+        nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
+        os.makedirs(nltk_data_dir, exist_ok=True)
+        nltk.data.path.insert(0, nltk_data_dir)
+        
         # Download required NLTK data with SSL workaround
         print("Downloading NLTK data...")
         try:
             # First attempt - normal download
-            nltk.download('punkt', quiet=True)
-            nltk.download('averaged_perceptron_tagger', quiet=True)
-            nltk.download('wordnet', quiet=True)
+            nltk.download('punkt', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('wordnet', quiet=True, download_dir=nltk_data_dir)
         except Exception as ssl_error:
             print("SSL verification issue detected. Trying alternative download method...")
             import ssl
-            import nltk.downloader
             
             # Create an unverified SSL context
             try:
@@ -52,9 +57,27 @@ def setup_dependencies():
                 ssl._create_default_https_context = _create_unverified_https_context
             
             # Try the download again with the modified SSL context
-            nltk.download('punkt', quiet=True)
-            nltk.download('averaged_perceptron_tagger', quiet=True)
-            nltk.download('wordnet', quiet=True)
+            nltk.download('punkt', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('wordnet', quiet=True, download_dir=nltk_data_dir)
+        
+        # Verify that NLTK data files are available
+        nltk_data_files = {
+            'punkt': os.path.join(nltk_data_dir, 'tokenizers', 'punkt'),
+            'averaged_perceptron_tagger': os.path.join(nltk_data_dir, 'taggers', 'averaged_perceptron_tagger'),
+            'wordnet': os.path.join(nltk_data_dir, 'corpora', 'wordnet')
+        }
+        
+        all_available = True
+        for name, path in nltk_data_files.items():
+            if not os.path.exists(path):
+                print(f"Warning: {name} data not available at {path}")
+                all_available = False
+        
+        if all_available:
+            print("All NLTK data files successfully downloaded!")
+        else:
+            print("Some NLTK data files may be missing. Continuing with degraded functionality.")
             
         print("Setup complete!")
     except Exception as e:
