@@ -757,15 +757,18 @@ def main():
     
     # Main content tabs
     if st.session_state.user_profile:
-        tab1, tab2, tab3 = st.tabs(["Portfolio", "Price Alerts", "Technical Analysis"])
+        tab1, tab2, tab3, tab4 = st.tabs(["CryptoBuddy Chat", "Portfolio", "Price Alerts", "Technical Analysis"])
         
         with tab1:
+            display_buddy_chat()
+            
+        with tab2:
             display_portfolio_analysis()
         
-        with tab2:
+        with tab3:
             display_price_alerts()
         
-        with tab3:
+        with tab4:
             display_technical_analysis()
     else:
         st.info("👋 Welcome to CryptoBuddy! Please log in or create a profile to get started.")
