@@ -1,21 +1,22 @@
-# 🚀 CryptoBuddy - The AI-Powered Crypto Recommendation Chatbot
+# 🚀 CryptoBuddy - AI-Powered Crypto Recommendation Web App
 
 ## 🌟 Overview
 
-CryptoBuddy is an intelligent cryptocurrency advisory chatbot that leverages Natural Language Processing (NLP) to interpret user queries and provide personalized cryptocurrency recommendations. By analyzing real-time market data from the CoinGecko API and applying rule-based recommendation algorithms, CryptoBuddy offers insights on trending cryptocurrencies, sustainable options, and long-term investment opportunities.
+CryptoBuddy is an intelligent cryptocurrency advisory application that leverages Natural Language Processing (NLP) to interpret user queries and provide personalized cryptocurrency recommendations. Originally developed as a command-line chatbot, it's now a web application built with Streamlit, offering an intuitive graphical interface while maintaining all the powerful features of the original version. By analyzing real-time market data from the CoinGecko API and applying rule-based recommendation algorithms, CryptoBuddy offers insights on trending cryptocurrencies, sustainable options, and long-term investment opportunities.
 
 ## ✨ Key Features
 
 - **🧠 Natural Language Processing**: Understands natural language queries through NLTK integration
 - **📊 Real-time Data**: Fetches current cryptocurrency prices, market caps, and trends from CoinGecko API
 - **🌱 Sustainability Focus**: Includes environmental impact considerations for crypto recommendations
-- **💬 Interactive Interface**: Engaging, varied responses with randomized greetings and disclaimers
+- **💬 Interactive Chat Interface**: Engaging, varied responses with randomized greetings and disclaimers
 - **📝 Multiple Query Types**: Handles different intents like trending, sustainable, and long-term investment queries
-- **🔍 Advanced Technical Analysis**: Provides sophisticated market indicators including RSI, MACD and Bollinger Bands
-- **🔔 Price Alerts**: Set and manage custom price alerts for your favorite cryptocurrencies
+- **🔍 Advanced Technical Analysis**: Interactive visualizations for sophisticated market indicators including RSI, MACD and Bollinger Bands
+- **🔔 Price Alerts**: Set and manage custom price alerts for your favorite cryptocurrencies through an intuitive interface
 - **👤 Personalized Profiles**: Save your preferences and get tailored cryptocurrency recommendations
-- **💼 Portfolio Management**: Get investment allocation suggestions based on various risk profiles
-- **⌨️ Command Interface**: Specialized slash commands for quick access to advanced features
+- **💼 Portfolio Management**: Interactive portfolio suggestions with visual breakdowns based on various risk profiles
+- **📊 Data Visualizations**: Beautiful charts and graphs for analyzing cryptocurrency performance
+- **📱 Responsive Web Interface**: User-friendly Streamlit interface accessible from any browser
 
 ## 🛠️ Technical Components
 
@@ -73,11 +74,23 @@ git clone <https://github.com/Faqih001/AI-For-Software-Engineering.git>
 3. **Install dependencies**
 
    ```bash
-   pip install nltk pycoingecko
+   pip install -r requirements.txt
    ```
 
-4. **Run the application**
+4. **Run the launcher script (recommended)**
 
+   ```bash
+   python run_crypto_buddy.py
+   ```
+
+5. **Or run either version directly**
+
+   For the Streamlit web application:
+   ```bash
+   streamlit run app.py
+   ```
+
+   For the command-line version:
    ```bash
    python crypto_buddy.py
    ```
@@ -111,6 +124,16 @@ Try these enhanced capabilities:
 - "Show me a technical analysis of Cardano"
 - "Suggest an aggressive portfolio for $5000"
 - "What are the key indicators for Solana?"
+
+### Streamlit Web Interface
+
+The new web application provides all the functionality of the command-line version with an intuitive GUI:
+
+1. **Chat Tab**: Ask questions and get cryptocurrency recommendations in a chat interface
+2. **Profile Tab**: Create and manage your user profile with easy-to-use form inputs
+3. **Technical Analysis Tab**: Generate interactive visualizations with price charts and indicators
+4. **Portfolio Tab**: Create and analyze portfolio suggestions with visual breakdowns
+5. **Price Alerts Tab**: Set up and manage price alerts through a user-friendly interface
 
 ## 🧩 How It Works
 
@@ -169,6 +192,33 @@ CryptoBuddy provides information on a wide range of cryptocurrencies:
 - **Chainlink (LINK)**: Decentralized oracle network
 - **Polygon (MATIC)**: Ethereum scaling platform
 - **NEAR Protocol (NEAR)**: Layer 1 blockchain
+
+## ✅ Web App Conversion
+
+CryptoBuddy has been converted from a command-line application to a full-featured web application using Streamlit, making it more accessible and user-friendly while preserving all the advanced functionality of the original version. The web interface provides:
+
+1. **Intuitive Navigation**: Tabbed interface for easy access to different features
+2. **Interactive Data Visualization**: Dynamic charts and graphs for technical analysis
+3. **Responsive Design**: Accessible from desktop and mobile browsers
+4. **Live Updates**: Real-time data fetching and alert monitoring
+5. **Enhanced User Experience**: Form-based inputs and dropdown menus for easier interaction
+
+### 📱 Application Screenshots
+
+#### Chat Interface
+The chat interface features a conversation-style layout with user messages and CryptoBuddy responses, making it easy to ask questions about cryptocurrencies in natural language.
+
+#### Technical Analysis Dashboard
+The Technical Analysis tab provides interactive price charts with technical indicators like RSI, SMA, Bollinger Bands, and more, along with automated signal interpretations.
+
+#### Portfolio Visualization
+The Portfolio tab displays allocation recommendations with pie charts and performance metrics, allowing users to compare different investment strategies.
+
+#### User Profile Management
+The Profile tab offers an intuitive form to set risk tolerance, sustainability preferences, and other user settings that affect recommendations.
+
+#### Price Alert Configuration
+The Price Alerts tab provides a simple interface to set, monitor, and manage cryptocurrency price alerts with real-time notifications.
 
 ## ✅ Advanced Features
 
