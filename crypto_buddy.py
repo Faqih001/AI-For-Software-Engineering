@@ -104,16 +104,29 @@ def fetch_crypto_data():
 def get_synonyms(word):
     """Get synonyms for a word using WordNet."""
     synonyms = set()
-    for syn in wordnet.synsets(word):
-        for lemma in syn.lemmas():
-            synonyms.add(lemma.name().lower())
+    try:
+        for syn in wordnet.synsets(word):
+            for lemma in syn.lemmas():
+                synonyms.add(lemma.name().lower())
+    except LookupError:
+        # WordNet data not available, return empty set
+        pass
     return synonyms
 
 def interpret_query(user_query):
     """Interpret user query intent using NLP."""
-    # Tokenize and tag the query
-    tokens = word_tokenize(user_query.lower())
-    tagged = pos_tag(tokens)
+    # Check if NLTK resources are available
+    nltk_available = True
+    try:
+        # Try using NLTK functions
+        tokens = word_tokenize(user_query.lower())
+        tagged = pos_tag(tokens)
+    except LookupError:
+        # NLTK data not available, use simple fallback
+        nltk_available = False
+        tokens = user_query.lower().split()
+        tagged = [(token, 'UNKNOWN') for token in tokens]
+        print("Notice: Using simplified query analysis (NLTK data unavailable)")
     
     # Define keywords and their synonyms
     trend_keywords = {'trend', 'trending', 'rise', 'rising', 'up', 'growth', 'profitable', 'profit'}
@@ -121,16 +134,18 @@ def interpret_query(user_query):
     longterm_keywords = {'longterm', 'long', 'future', 'growth', 'potential'}
     general_keywords = {'which', 'what', 'recommend', 'suggest', 'best', 'good'}
     
-    # Expand keywords with synonyms
-    trend_synonyms = set()
-    sustain_synonyms = set()
-    longterm_synonyms = set()
-    for word in trend_keywords:
-        trend_synonyms.update(get_synonyms(word))
-    for word in sustain_keywords:
-        sustain_synonyms.update(get_synonyms(word))
-    for word in longterm_keywords:
-        longterm_synonyms.update(get_synonyms(word))
+    # Expand keywords with synonyms if NLTK is available
+    trend_synonyms = set(trend_keywords)
+    sustain_synonyms = set(sustain_keywords)
+    longterm_synonyms = set(longterm_keywords)
+    
+    if nltk_available:
+        for word in trend_keywords:
+            trend_synonyms.update(get_synonyms(word))
+        for word in sustain_keywords:
+            sustain_synonyms.update(get_synonyms(word))
+        for word in longterm_keywords:
+            longterm_synonyms.update(get_synonyms(word))
     
     # Analyze query intent
     intent = 'general'
