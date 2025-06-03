@@ -686,33 +686,36 @@ def handle_buddy_chat(message):
 def display_buddy_chat():
     st.subheader("Chat with CryptoBuddy")
     
-    # Initialize session state for auto-scrolling
+    # Initialize session states
     if 'chat_key' not in st.session_state:
         st.session_state.chat_key = 0
+    if 'thinking' not in st.session_state:
+        st.session_state.thinking = False
+    if 'show_welcome' not in st.session_state:
+        st.session_state.show_welcome = True
         
-    # Welcome message if chat history is empty
-    if not st.session_state.buddy_chat_history:
-        st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
-        st.write("• 📊 Portfolio suggestions and analysis")
-        st.write("• 🔔 Setting up price alerts")
-        st.write("• 📈 Technical analysis and trends")
-        st.write("• 💡 General cryptocurrency advice")
-        
-        # Add some example queries to help users get started
-        with st.expander("💡 Try these example questions"):
-            st.write("- What cryptocurrencies are trending right now?")
-            st.write("- Give me a technical analysis of Bitcoin")
-            st.write("- Create a conservative portfolio with $5000")
-            st.write("- Alert me when Ethereum goes above $3000")
-            st.write("- Which coins are good for long-term investment?")
+    # Always show welcome message if flag is set
+    if st.session_state.show_welcome:
+        welcome_container = st.container()
+        with welcome_container:
+            st.write("👋 Hi! I'm your AI Crypto Advisor. I can help you with:")
+            st.write("• 📊 Portfolio suggestions and analysis")
+            st.write("• 🔔 Setting up price alerts")
+            st.write("• 📈 Technical analysis and trends")
+            st.write("• 💡 General cryptocurrency advice")
+            
+            with st.expander("💡 Try these example questions"):
+                st.write("- What cryptocurrencies are trending right now?")
+                st.write("- Give me a technical analysis of Bitcoin")
+                st.write("- Create a conservative portfolio with $5000")
+                st.write("- Alert me when Ethereum goes above $3000")
+                st.write("- Which coins are good for long-term investment?")
     
     # Add chat styling
     st.markdown(get_chat_styling(), unsafe_allow_html=True)
     
-    # Create a container for chat history
+    # Create containers
     chat_container = st.container()
-    
-    # Chat input at the bottom of the screen
     input_container = st.container()
     
     # Display chat history with auto-scroll
@@ -750,38 +753,36 @@ def display_buddy_chat():
     
     # Chat input with thinking animation
     with input_container:
-        # Only show input if not currently processing a message
-        if "thinking" not in st.session_state:
+        if message := st.chat_input("Ask me anything about crypto...", key=f"chat_input_{st.session_state.chat_key}"):
+            # Hide welcome message once user starts chatting
+            st.session_state.show_welcome = False
+            
+            # Show thinking animation
+            thinking_placeholder = st.empty()
+            st.session_state.thinking = True
+            
+            with thinking_placeholder:
+                st.markdown('''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">
+                            <div class="thinking-dots">Thinking...</div>
+                        </div>
+                    </div>
+                ''', unsafe_allow_html=True)
+            
+            # Process message
+            handle_buddy_chat(message)
+            
+            # Update chat key to force re-render and ensure correct scrolling
+            st.session_state.chat_key += 1
+            
+            # Remove thinking animation and reset state
+            thinking_placeholder.empty()
             st.session_state.thinking = False
             
-        if not st.session_state.thinking:
-            if message := st.chat_input("Ask me anything about crypto...", key=f"chat_input_{st.session_state.chat_key}"):
-                # Show thinking animation
-                thinking_placeholder = st.empty()
-                st.session_state.thinking = True
-                
-                with thinking_placeholder:
-                    st.markdown(f'''
-                        <div class="assistant-message-container">
-                            <div class="message-avatar assistant-avatar">🤖</div>
-                            <div class="assistant-message">
-                                <span class="thinking-dots">Thinking</span>
-                            </div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                    
-                # Process message
-                handle_buddy_chat(message)
-                
-                # Update chat key to force re-render and ensure correct scrolling
-                st.session_state.chat_key += 1
-                
-                # Remove thinking animation and reset state
-                thinking_placeholder.empty()
-                st.session_state.thinking = False
-                
-                # Rerun to update chat immediately
-                st.rerun()
+            # Rerun to update chat immediately
+            st.rerun()
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")
