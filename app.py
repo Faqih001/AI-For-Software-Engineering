@@ -828,7 +828,7 @@ def display_buddy_chat():
                 st.session_state.thinking = False
                 
                 # Rerun to update chat immediately
-                st.experimental_rerun()
+                st.rerun()
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")

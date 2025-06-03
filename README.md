@@ -86,11 +86,13 @@ git clone <https://github.com/Faqih001/AI-For-Software-Engineering.git>
 5. **Or run either version directly**
 
    For the Streamlit web application:
+
    ```bash
    streamlit run app.py
    ```
 
    For the command-line version:
+
    ```bash
    python crypto_buddy.py
    ```
@@ -206,18 +208,23 @@ CryptoBuddy has been converted from a command-line application to a full-feature
 ### 📱 Application Screenshots
 
 #### Chat Interface
+
 The chat interface features a conversation-style layout with user messages and CryptoBuddy responses, making it easy to ask questions about cryptocurrencies in natural language.
 
 #### Technical Analysis Dashboard
+
 The Technical Analysis tab provides interactive price charts with technical indicators like RSI, SMA, Bollinger Bands, and more, along with automated signal interpretations.
 
 #### Portfolio Visualization
+
 The Portfolio tab displays allocation recommendations with pie charts and performance metrics, allowing users to compare different investment strategies.
 
 #### User Profile Management
+
 The Profile tab offers an intuitive form to set risk tolerance, sustainability preferences, and other user settings that affect recommendations.
 
 #### Price Alert Configuration
+
 The Price Alerts tab provides a simple interface to set, monitor, and manage cryptocurrency price alerts with real-time notifications.
 
 ## ✅ Advanced Features
