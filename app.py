@@ -27,6 +27,7 @@ from crypto_buddy import (
     AlertManager,
     UserProfile,
     PortfolioManager,
+    crypto_buddy_response,
     fetch_crypto_data,
     fetch_historical_data,
     calculate_technical_indicators,
@@ -615,67 +616,10 @@ def handle_buddy_chat(message):
         # Add message to history first for immediate feedback
         st.session_state.buddy_chat_history.append({"role": "user", "content": message})
         
-        # Initialize response
-        response = None
-        message_lower = message.lower()
+        # Get response from crypto_buddy's response function
+        response = crypto_buddy_response(message, st.session_state.user_profile)
         
-        # Quick responses for common queries to improve responsiveness
-        if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
-            username = st.session_state.user_profile.username if st.session_state.user_profile else None
-            greeting = get_greeting()
-            if username:
-                greeting = greeting.replace("!", f" {username}!")
-            
-            response = f"{greeting}\n\nI can help you with:\n"
-            response += "• Portfolio management and suggestions\n"
-            response += "• Price alerts and monitoring\n"
-            response += "• Technical analysis and trends\n"
-            response += "• Cryptocurrency market insights"
-        
-        # Delegate to specialized handlers for complex queries
-        elif any(word in message_lower for word in ['portfolio', 'investment', 'invest']):
-            handle_portfolio_chat(message)
-            return
-            
-        elif any(word in message_lower for word in ['alert', 'notify', 'notification']):
-            handle_alerts_chat(message)
-            return
-            
-        elif any(word in message_lower for word in ['analysis', 'trend', 'price', 'technical']):
-            handle_technical_chat(message)
-            return
-        
-        # For other queries, process with general response
-        else:
-            # Generate response based on intent
-            intent = interpret_query(message)
-            
-            if any(word in message_lower for word in ['trending', 'popular', 'hot']):
-                crypto_db = fetch_crypto_data()
-                if crypto_db:
-                    response = get_trending_response(crypto_db)
-                else:
-                    response = get_no_trending_response()
-                
-            elif any(word in message_lower for word in ['sustainable', 'eco', 'green']):
-                crypto_db = fetch_crypto_data()
-                if crypto_db:
-                    response = get_sustainable_response(crypto_db)
-                else:
-                    response = get_less_sustainable_response()
-                
-            elif any(word in message_lower for word in ['longterm', 'long term', 'long-term']):
-                crypto_db = fetch_crypto_data()
-                if crypto_db:
-                    response = get_longterm_response(crypto_db)
-                else:
-                    response = get_no_longterm_response()
-            
-            # Default response if no specific intent is matched
-            if not response:
-                response = get_general_response()
-        
-        # Add response to chat history if we have one
+        # Add response to chat history
         if response:
             st.session_state.buddy_chat_history.append({"role": "assistant", "content": response})
             
