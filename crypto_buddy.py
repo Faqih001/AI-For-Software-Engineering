@@ -240,6 +240,122 @@ def interpret_query(user_query):
     
     return intent
 
+def get_trending_response(coin_name, trend, market_cap):
+    """Return a varied response for trending crypto recommendations."""
+    responses = [
+        f"For profitability, I recommend {coin_name}! 🚀 It's {trend} up with a {market_cap} market cap.\n",
+        f"If you're chasing gains, {coin_name} is your best bet! It's currently {trend} with substantial market presence.\n",
+        f"Looking at momentum plays? {coin_name} stands out with its {trend} trajectory and {market_cap} capitalization! 📈\n",
+        f"For maximum profit potential, {coin_name} is showing strong bullish signals with its {trend} pattern.\n",
+        f"Hot pick alert! {coin_name} is demonstrating remarkable upward mobility in the current market! 🔥\n",
+        f"Investors seeking short-term gains are flocking to {coin_name} due to its {trend} momentum and {market_cap} market cap! 💸\n",
+        f"{coin_name} is currently the star performer, with impressive {trend} patterns that technical analysts are excited about! ⭐\n",
+        f"The numbers don't lie - {coin_name} is outperforming with its {trend} trend and robust {market_cap} capitalization! 📊\n",
+        f"My analysis suggests {coin_name} for those seeking profit opportunities in this volatile market! 🧠\n",
+        f"Traders are buzzing about {coin_name} right now - it's showing strong {trend} signals with substantial market backing! 🐝\n"
+    ]
+    return random.choice(responses)
+
+def get_no_trending_response():
+    """Return a response when no trending coins are found."""
+    responses = [
+        "Hmm, no coins match both rising trends and high market cap right now. Try Cardano for a rising star! 🌱\n",
+        "The market's a bit cautious today - no clear winners with both upward momentum and market dominance. Consider Cardano as an alternative! 🔍\n",
+        "I don't see any cryptocurrencies that satisfy both trending status and market cap criteria at the moment. Cardano might be worth investigating! 🧐\n",
+        "Market conditions are complex right now. No cryptos meet my strict criteria for both trend and capitalization, but Cardano shows promise! 🌊\n",
+        "It's a tricky market cycle - there aren't any clear winners meeting both my trend and market cap thresholds. Take a look at Cardano! 🔄\n",
+        "The data isn't showing any cryptocurrencies with the perfect combination of upward momentum and market strength. Cardano remains interesting though! 📱\n",
+        "Today's market isn't giving us any cryptos with both bullish trends and substantial market presence. Cardano has potential worth exploring! 🌠\n",
+        "Market indicators aren't aligning for any single cryptocurrency right now. Consider Cardano for its growing potential! 📶\n",
+        "The crypto markets are consolidating - no assets currently display both strong upward movement and significant market share. Cardano shows positive signs! 📉📈\n",
+        "I can't confidently recommend any crypto for pure momentum trading right now. Cardano offers an interesting alternative with its unique approach! 🧩\n"
+    ]
+    return random.choice(responses)
+
+def get_sustainable_response(coin_name, score):
+    """Return a varied response for sustainable crypto recommendations."""
+    formatted_score = score * 10
+    responses = [
+        f"Invest in {coin_name}! 🌱 It's eco-friendly with a sustainability score of {formatted_score}/10!\n",
+        f"For the environmentally conscious investor, {coin_name} leads the pack with an impressive sustainability score of {formatted_score}/10! 🌍\n",
+        f"Looking to go green? {coin_name} stands out with its remarkable {formatted_score}/10 sustainability rating! 🌿\n",
+        f"Eco-warriors rejoice! {coin_name} offers both investment potential and environmental responsibility with a {formatted_score}/10 sustainability score! 🌳\n",
+        f"The planet will thank you for investing in {coin_name} - it boasts a stellar {formatted_score}/10 on the sustainability scale! 🌎\n",
+        f"For minimal carbon footprint with maximum potential, {coin_name} delivers with its {formatted_score}/10 sustainability rating! ♻️\n",
+        f"Climate-conscious crypto enthusiasts are rallying behind {coin_name} thanks to its impressive {formatted_score}/10 sustainability metrics! 🌦️\n",
+        f"{coin_name} is leading the charge in the green crypto revolution with a sustainability score of {formatted_score}/10! 🚀\n",
+        f"Sustainable investing made simple: {coin_name} scores a remarkable {formatted_score}/10 for environmental responsibility! 📊\n",
+        f"Merge your financial goals with environmental values by considering {coin_name} - sustainability score: {formatted_score}/10! 💚\n"
+    ]
+    return random.choice(responses)
+
+def get_less_sustainable_response(coin_name, score):
+    """Return a response for less sustainable crypto options."""
+    formatted_score = score * 10
+    responses = [
+        f"{coin_name} is the most sustainable with a score of {formatted_score}/10, but explore more options for greener choices! 🌍\n",
+        f"While {coin_name} leads available options with a {formatted_score}/10 sustainability rating, the crypto industry is still evolving toward greener solutions! 🌱\n",
+        f"{coin_name} scores {formatted_score}/10 on sustainability - moderate, but the best among current options. Keep an eye out for emerging greener alternatives! 🔍\n",
+        f"With a {formatted_score}/10 sustainability score, {coin_name} is leading the pack, though the industry has room for improvement in eco-friendly practices! 📈\n",
+        f"{coin_name} offers the best environmental credentials ({formatted_score}/10) among current options, though truly green crypto remains an evolving goal! 🌿\n",
+        f"At {formatted_score}/10 for sustainability, {coin_name} represents the current best option, though the crypto space is still working toward truly green solutions! 🌤️\n",
+        f"The most eco-conscious choice available is {coin_name} with a {formatted_score}/10 sustainability score. The crypto industry continues to work on reducing its footprint! ♻️\n",
+        f"{coin_name} leads with a {formatted_score}/10 sustainability score, but remember that the benchmark for truly sustainable crypto is still developing! 🌳\n",
+        f"Among current options, {coin_name} is most sustainable at {formatted_score}/10 - a modest but leading score as the industry moves toward greener technologies! 🌎\n",
+        f"With environmental concerns in mind, {coin_name} offers the best current balance at {formatted_score}/10 for sustainability. Keep watching as greener options emerge! 🔭\n"
+    ]
+    return random.choice(responses)
+
+def get_longterm_response(coin_name, trend, score):
+    """Return a varied response for long-term crypto recommendations."""
+    formatted_score = score * 10
+    responses = [
+        f"For long-term growth, go with {coin_name}! 🚀 It's {trend} up and has a sustainability score of {formatted_score}/10!\n",
+        f"Looking years ahead? {coin_name} presents an intriguing balance of current {trend} momentum and future-proof sustainability ({formatted_score}/10)! 🔮\n",
+        f"Strategic investors should consider {coin_name} for their portfolios - it combines {trend} performance with sustainable practices rated {formatted_score}/10! 📈\n",
+        f"For the patient investor thinking long-term, {coin_name} offers both {trend} trends and environmental consciousness ({formatted_score}/10)! ⏳\n",
+        f"My long-range analysis points to {coin_name} as a solid option with its {trend} technical indicators and sustainability rating of {formatted_score}/10! 📊\n",
+        f"Those building wealth over time might appreciate {coin_name}'s combination of {trend} market behavior and eco-friendly approach ({formatted_score}/10)! 💰\n",
+        f"The long-term thesis for {coin_name} looks compelling - {trend} market performance plus sustainable practices scoring {formatted_score}/10! 📝\n",
+        f"If you're playing the long game, {coin_name} deserves attention with its {trend} trajectory and impressive sustainability metrics ({formatted_score}/10)! 🎯\n",
+        f"Retirement portfolio material? Consider {coin_name} with its {trend} patterns and forward-thinking sustainability score of {formatted_score}/10! 🏦\n",
+        f"{coin_name} stands out for horizon investors - showing {trend} momentum now and future-readiness with a sustainability rating of {formatted_score}/10! 🌅\n"
+    ]
+    return random.choice(responses)
+
+def get_no_longterm_response():
+    """Return a response when no ideal long-term coins are found."""
+    responses = [
+        "Cardano looks promising for long-term growth with its rising trend and eco-friendly vibe! 🌱\n",
+        "For long-term investing, I'd suggest exploring Cardano - its proof-of-stake consensus mechanism offers sustainable growth potential! ♻️\n",
+        "While no coins meet my strict long-term criteria right now, Cardano stands out with its forward-thinking architecture and environmental consciousness! 🌿\n",
+        "The horizon investor might appreciate Cardano's unique combination of technological innovation and energy efficiency! 🔋\n",
+        "Looking years ahead? Cardano's approach to sustainability while maintaining growth potential makes it worth investigating! 🔭\n",
+        "For the patient investor, Cardano represents an intriguing long-term prospect with its environmentally responsible blockchain design! 🌳\n",
+        "My analysis suggests Cardano for those thinking beyond market cycles - its sustainable foundation supports long-range potential! 📈\n",
+        "Strategic portfolio building might include Cardano for its balance of current development and future-focused sustainability! 🧩\n",
+        "The long view favors projects like Cardano that prioritize both technological advancement and environmental responsibility! 🌎\n",
+        "No perfect candidates for long-term investment right now, but Cardano's trajectory and eco-credentials make it worth consideration! 🌠\n"
+    ]
+    return random.choice(responses)
+
+def get_general_response(coin_name, trend, score):
+    """Return a varied general recommendation response."""
+    formatted_score = score * 10
+    responses = [
+        f"I'd suggest {coin_name}! It balances profitability (trend: {trend}) and sustainability (score: {formatted_score}/10). 🚀🌱\n",
+        f"Based on current data, {coin_name} offers a compelling balance of {trend} market behavior and environmental responsibility ({formatted_score}/10)! 📊\n",
+        f"My analysis points to {coin_name} as a well-rounded option with its {trend} price action and sustainability rating of {formatted_score}/10! 🔍\n",
+        f"Looking at the overall picture, {coin_name} stands out with its {trend} momentum and eco-conscious approach (scoring {formatted_score}/10)! 🌟\n",
+        f"For a balanced investment approach, consider {coin_name} - it's showing {trend} performance while maintaining a {formatted_score}/10 sustainability score! ⚖️\n",
+        f"Taking all factors into account, {coin_name} emerges as a strong contender with its {trend} market position and {formatted_score}/10 environmental rating! 🏆\n",
+        f"The data suggests {coin_name} as your best all-around option, combining {trend} financial indicators with responsible practices ({formatted_score}/10)! 📱\n",
+        f"My comprehensive evaluation favors {coin_name}, which balances {trend} market metrics with sustainable operations rated {formatted_score}/10! 🧠\n",
+        f"For investors seeking balance, {coin_name} delivers with its {trend} trajectory and commitment to sustainability (scoring {formatted_score}/10)! 🎯\n",
+        f"When weighing all criteria, {coin_name} comes out ahead by combining {trend} market performance with environmental consciousness ({formatted_score}/10)! 💯\n"
+    ]
+    return random.choice(responses)
+
 def crypto_buddy_response(user_query):
     """Generate chatbot response based on user query."""
     # Fetch real-time data
@@ -265,17 +381,17 @@ def crypto_buddy_response(user_query):
             if crypto_db[coin]["price_trend"] == "rising" and crypto_db[coin]["market_cap"] == "high"
         ]
         if rising_coins:
-            response += f"For profitability, I recommend {rising_coins[0]}! 🚀 It's trending up with a strong market cap.\n"
+            response += get_trending_response(rising_coins[0], crypto_db[rising_coins[0]]["price_trend"], crypto_db[rising_coins[0]]["market_cap"])
         else:
-            response += "Hmm, no coins match both rising trends and high market cap right now. Try Cardano for a rising star! 🌱\n"
+            response += get_no_trending_response()
     
     elif intent == 'sustainable':
         # Find the most sustainable coin
         recommend = max(crypto_db, key=lambda x: crypto_db[x]["sustainability_score"])
         if crypto_db[recommend]["sustainability_score"] > 7/10:
-            response += f"Invest in {recommend}! 🌱 It's eco-friendly with a sustainability score of {crypto_db[recommend]['sustainability_score']*10}/10!\n"
+            response += get_sustainable_response(recommend, crypto_db[recommend]['sustainability_score'])
         else:
-            response += f"{recommend} is the most sustainable with a score of {crypto_db[recommend]['sustainability_score']*10}/10, but explore more options for greener choices! 🌍\n"
+            response += get_less_sustainable_response(recommend, crypto_db[recommend]['sustainability_score'])
     
     elif intent == 'longterm':
         # Recommend coins with rising trend and high sustainability
@@ -284,14 +400,14 @@ def crypto_buddy_response(user_query):
             if crypto_db[coin]["price_trend"] == "rising" and crypto_db[coin]["sustainability_score"] > 7/10
         ]
         if growth_coins:
-            response += f"For long-term growth, go with {growth_coins[0]}! 🚀 It's trending up and has a sustainability score of {crypto_db[growth_coins[0]]['sustainability_score']*10}/10!\n"
+            response += get_longterm_response(growth_coins[0], crypto_db[growth_coins[0]]["price_trend"], crypto_db[growth_coins[0]]["sustainability_score"])
         else:
-            response += "Cardano looks promising for long-term growth with its rising trend and eco-friendly vibe! 🌱\n"
+            response += get_no_longterm_response()
     
     else:  # General intent
         # General recommendation based on balanced criteria
         recommend = max(crypto_db, key=lambda x: (crypto_db[x]["sustainability_score"], 1 if crypto_db[x]["price_trend"] == "rising" else 0))
-        response += f"I'd suggest {recommend}! It balances profitability (trend: {crypto_db[recommend]['price_trend']}) and sustainability (score: {crypto_db[recommend]['sustainability_score']*10}/10). 🚀🌱\n"
+        response += get_general_response(recommend, crypto_db[recommend]['price_trend'], crypto_db[recommend]['sustainability_score'])
     
     return response
 
