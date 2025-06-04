@@ -650,7 +650,8 @@ def display_buddy_chat():
             st.write("- Give me a technical analysis of Bitcoin")
             st.write("- Create a conservative portfolio with $5000")
             st.write("- Alert me when Ethereum goes above $3000")
-
+            st.write("- Which coins are good for long-term investment?")
+    
     # Add chat styling
     st.markdown(get_chat_styling(), unsafe_allow_html=True)
     
@@ -664,40 +665,62 @@ def display_buddy_chat():
         
         for i, message in enumerate(st.session_state.buddy_chat_history):
             if isinstance(message, dict) and "role" in message and "content" in message:
+                key = f"message_{i}_{st.session_state.chat_key}"
+                
                 if message["role"] == "user":
                     st.markdown(f'''
-                        <div class="user-message-container">
+                        <div class="user-message-container" id="{key}">
                             <div class="user-message">{message["content"]}</div>
                             <div class="message-avatar user-avatar">👤</div>
                         </div>
                     ''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''
-                        <div class="assistant-message-container">
+                        <div class="assistant-message-container" id="{key}">
                             <div class="message-avatar assistant-avatar">🤖</div>
                             <div class="assistant-message">{message["content"]}</div>
                         </div>
                     ''', unsafe_allow_html=True)
-        
-        # Show thinking animation if processing
-        if st.session_state.thinking:
-            st.markdown('''
-                <div class="assistant-message-container">
-                    <div class="message-avatar assistant-avatar">🤖</div>
-                    <div class="assistant-message">Thinking<span class="typing-animation">...</span></div>
-                </div>
-            ''', unsafe_allow_html=True)
+                    
+                # Auto-scroll to latest message
+                if i == len(st.session_state.buddy_chat_history) - 1:
+                    st.markdown(f'''
+                        <script>
+                            document.getElementById("{key}").scrollIntoView({{behavior: "smooth"}});
+                        </script>
+                    ''', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)  # Close chat container
     
     # Chat input with thinking animation
     with input_container:
         if message := st.chat_input("Ask me anything about crypto...", key=f"chat_input_{st.session_state.chat_key}"):
-            st.session_state.thinking = True  # Show thinking animation
-            st.session_state.chat_key += 1  # Increment chat key to force re-render
-            handle_buddy_chat(message)  # Process the message
-            st.session_state.thinking = False  # Hide thinking animation
-            st.rerun()  # Rerun to update the UI
+            # Show thinking animation
+            thinking_placeholder = st.empty()
+            st.session_state.thinking = True
+            
+            with thinking_placeholder:
+                st.markdown('''
+                    <div class="assistant-message-container">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <div class="assistant-message">
+                            <div class="thinking-dots">Thinking...</div>
+                        </div>
+                    </div>
+                ''', unsafe_allow_html=True)
+            
+            # Process message
+            handle_buddy_chat(message)
+            
+            # Update chat key to force re-render and ensure correct scrolling
+            st.session_state.chat_key += 1
+            
+            # Remove thinking animation and reset state
+            thinking_placeholder.empty()
+            st.session_state.thinking = False
+            
+            # Rerun to update chat immediately
+            st.rerun()
 
 def main():
     st.title("CryptoBuddy - Your AI Crypto Advisor 🤖")

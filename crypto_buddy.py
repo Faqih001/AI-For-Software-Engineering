@@ -243,13 +243,10 @@ def setup_dependencies():
         try:
             import pycoingecko
             import nltk
-            import ssl
         except ImportError:
             import subprocess
             print("Installing required packages...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pycoingecko", "nltk", "certifi"])
-            import nltk
-            import ssl
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pycoingecko", "nltk"])
             
         # Set up the NLTK data path to use a local directory
         import os
@@ -257,16 +254,13 @@ def setup_dependencies():
         os.makedirs(nltk_data_dir, exist_ok=True)
         nltk.data.path.insert(0, nltk_data_dir)
         
-        # Create an unverified SSL context to handle certificate issues
-        try:
-            _create_unverified_https_context = ssl._create_unverified_context
-        except AttributeError:
-            pass
-        else:
-            ssl._create_default_https_context = _create_unverified_https_context
-        
         # Download required NLTK data with SSL workaround
         print("Downloading NLTK data...")
+        try:
+            # First attempt - normal download
+            nltk.download('punkt', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=nltk_data_dir)
+            nltk.download('wordnet', quiet=True, download_dir=nltk_data_dir)
         except Exception as ssl_error:
             print("SSL verification issue detected. Trying alternative download method...")
             import ssl
